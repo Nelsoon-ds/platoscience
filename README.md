@@ -1,2 +1,2 @@
-# platoscience
-platoscience repoo
+# Platoscience
+Platoscience repository
