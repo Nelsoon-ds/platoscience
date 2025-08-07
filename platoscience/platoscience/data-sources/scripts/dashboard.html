@@ -175,8 +175,11 @@
                 };
                 reader.readAsText(file);
             }
-            
+            /*             * Calculate lead score based on email, phone, and website presence.
+             * Adjust scoring logic as needed.
+             */
             function calculateLeadScore(clinic) {
+                
                 let score = 0;
                 if (clinic.email) score += 3;
                 if (clinic.phone) score += 2;
@@ -219,68 +222,73 @@
             }
 
             function renderTable() {
-                tableBody.innerHTML = '';
-                
-                const scoredClinics = filteredClinics.map(clinic => ({...clinic, score: calculateLeadScore(clinic)}));
-                
-                scoredClinics.sort((a, b) => {
-                    const valA = a[currentSort.key];
-                    const valB = b[currentSort.key];
-                    let comparison = 0;
-                    if (valA > valB) {
-                        comparison = 1;
-                    } else if (valA < valB) {
-                        comparison = -1;
-                    }
-                    return currentSort.direction === 'asc' ? comparison : -comparison;
-                });
+    tableBody.innerHTML = '';
+    
+    const scoredClinics = filteredClinics.map(clinic => ({...clinic, score: calculateLeadScore(clinic)}));
+    
+    scoredClinics.sort((a, b) => {
+        const valA = a[currentSort.key];
+        const valB = b[currentSort.key];
+        let comparison = 0;
+        if (valA > valB) {
+            comparison = 1;
+        } else if (valA < valB) {
+            comparison = -1;
+        }
+        return currentSort.direction === 'asc' ? comparison : -comparison;
+    });
 
-                const startIndex = (currentPage - 1) * rowsPerPage;
-                const endIndex = startIndex + rowsPerPage;
-                const paginatedClinics = scoredClinics.slice(startIndex, endIndex);
-                
-                if (paginatedClinics.length === 0 && currentPage === 1) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No clinics match your search.</td></tr>';
-                }
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedClinics = scoredClinics.slice(startIndex, endIndex);
+    
+    if (paginatedClinics.length === 0 && currentPage === 1) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No clinics match your search.</td></tr>';
+    }
 
-                paginatedClinics.forEach((clinic) => {
-                    const status = leadStatuses[clinic.name] || 'New';
-                    // Sanitize the clinic name to prevent issues with quotes in HTML attributes
-                    const sanitizedName = (clinic.name || '').replace(/["“”]/g, '&quot;').replace(/'/g, '&#39;');
-                    const row = `
-                        <tr class="border-b border-gray-200 hover:bg-gray-50">
-                            <td class="p-4 align-top">
-                                <div class="font-bold text-gray-900">${clinic.name}</div>
-                                <a href="${clinic.website}" target="_blank" class="text-blue-600 hover:underline text-sm">${clinic.website !== '#' ? clinic.website : ''}</a>
-                            </td>
-                            <td class="p-4 align-top text-sm text-gray-600">
-                                ${clinic.address}<br>
-                                <span class="font-medium">${clinic.city}, ${clinic.country}</span>
-                            </td>
-                            <td class="p-4 align-top text-sm">
-                                ${clinic.email ? `<a href="mailto:${clinic.email}" class="text-blue-600 hover:underline">${clinic.email}</a><br>` : ''}
-                                ${clinic.phone ? `<span class="text-gray-600">${clinic.phone}</span>` : ''}
-                            </td>
-                            <td class="p-4 align-top text-center font-bold text-lg ${clinic.score > 4 ? 'text-green-600' : clinic.score > 2 ? 'text-yellow-600' : 'text-red-600'}">${clinic.score}</td>
-                            <td class="p-4 align-top text-sm text-gray-500">${clinic.source}</td>
-                            <td class="p-4 align-top">
-                                <select class="status-dropdown p-2 border border-gray-300 rounded-md" data-clinic-name="${sanitizedName}">
-                                    <option value="New" ${status === 'New' ? 'selected' : ''}>New</option>
-                                    <option value="Contacted" ${status === 'Contacted' ? 'selected' : ''}>Contacted</option>
-                                    <option value="Engaged" ${status === 'Engaged' ? 'selected' : ''}>Engaged</option>
-                                    <option value="Qualified" ${status === 'Qualified' ? 'selected' : ''}>Qualified</option>
-                                    <option value="Not a Fit" ${status === 'Not a Fit' ? 'selected' : ''}>Not a Fit</option>
-                                </select>
-                            </td>
-                        </tr>
-                    `;
-                    tableBody.innerHTML += row;
-                });
-                
-                clinicCount.textContent = filteredClinics.length;
-                renderPaginationControls(filteredClinics.length);
-                addStatusListeners();
-            }
+    paginatedClinics.forEach((clinic) => {
+        const status = leadStatuses[clinic.name] || 'New';
+        const sanitizedName = (clinic.name || '').replace(/["“”]/g, '&quot;').replace(/'/g, '&#39;');
+
+        // Helper constants to clean up data before rendering
+        const clinicAddress = clinic.address && clinic.address !== 'N/A' ? clinic.address : '';
+        const clinicCity = clinic.city && clinic.city !== 'N/A' ? clinic.city : '';
+        const clinicCountry = clinic.country && clinic.country !== 'N/A' ? clinic.country : '';
+        const clinicWebsite = clinic.website && clinic.website !== '#' ? clinic.website : '';
+
+        const row = `
+            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                <td class="p-4 align-top max-w-xs">
+                    <div class="font-bold text-gray-900 truncate" title="${clinic.name}">${clinic.name}</div>
+                    ${clinicWebsite ? `<a href="${clinicWebsite}" target="_blank" class="text-blue-600 hover:underline text-sm truncate block" title="${clinicWebsite}">${clinicWebsite}</a>` : ''}
+                </td>
+                <td class="p-4 align-top text-sm text-gray-600 max-w-sm">
+                    <div class="truncate" title="${clinicAddress}">${clinicAddress}</div>
+                    <span class="font-medium">${clinicCity ? `${clinicCity}, ` : ''}${clinicCountry}</span>
+                </td>
+                <td class="p-4 align-top text-sm max-w-xs">
+                    ${clinic.email ? `<div class="truncate" title="${clinic.email}"><a href="mailto:${clinic.email}" class="text-blue-600 hover:underline">${clinic.email}</a></div>` : ''}
+${clinic.phone ? `<a href="tel:${formatPhoneNumber(clinic.phone, clinic.country)}" class="text-blue-600 hover:underline">${formatPhoneNumber(clinic.phone, clinic.country)}</a>` : ''}                </td>
+                <td class="p-4 align-top text-center font-bold text-lg ${clinic.score > 4 ? 'text-green-600' : clinic.score > 2 ? 'text-yellow-600' : 'text-red-600'}">${clinic.score}</td>
+                <td class="p-4 align-top text-sm text-gray-500">${clinic.source}</td>
+                <td class="p-4 align-top">
+                    <select class="status-dropdown p-2 border border-gray-300 rounded-md" data-clinic-name="${sanitizedName}">
+                        <option value="New" ${status === 'New' ? 'selected' : ''}>New</option>
+                        <option value="Contacted" ${status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+                        <option value="Engaged" ${status === 'Engaged' ? 'selected' : ''}>Engaged</option>
+                        <option value="Qualified" ${status === 'Qualified' ? 'selected' : ''}>Qualified</option>
+                        <option value="Not a Fit" ${status === 'Not a Fit' ? 'selected' : ''}>Not a Fit</option>
+                    </select>
+                </td>
+            </tr>
+        `;
+        tableBody.innerHTML += row;
+    });
+    
+    clinicCount.textContent = filteredClinics.length;
+    renderPaginationControls(filteredClinics.length);
+    addStatusListeners();
+}
 
             function renderPaginationControls(totalItems) {
                 paginationControls.innerHTML = '';
@@ -403,6 +411,72 @@
                 header.addEventListener('click', handleSort);
             });
         });
+
+        const countryDialingCodes = {
+    // North America
+    'USA': '1',
+    'United States': '1',
+    'Canada': '1',
+    'Mexico': '52',
+    // Europe
+    'Germany': '49',
+    'United Kingdom': '44',
+    'France': '33',
+    'Italy': '39',
+    'Spain': '34',
+    'Switzerland': '41',
+    'Austria': '43',
+    'Belgium': '32',
+    'Netherlands': '31',
+    'Sweden': '46',
+    'Norway': '47',
+    'Denmark': '45',
+    'Finland': '358',
+    'Ireland': '353',
+    'Portugal': '351',
+    'Greece': '30',
+    'Poland': '48',
+    'Hungary': '36',
+    'Croatia': '385',
+    'Ukraine': '380',
+    // Oceania
+    'Australia': '61',
+    'New Zealand': '64',
+    // Asia
+    'Japan': '81',
+    'Israel': '972', 'Turkey': '90', 'Thailand': '66', 'Taiwan': '886','Hong Kong': '852',
+    'Singapore': '65', 'India': '91',
+    'Philippines': '63','Nepal': '977',
+
+    // Africa
+    'South Africa': '27',
+    // South America
+    'Brazil': '55','Ecuador': '593','Chile': '56','Peru': '51','Paraguay': '595'
+};
+
+    function formatPhoneNumber(phoneStr, country) {
+    // 1. If there's no phone number, return an empty string.
+    if (!phoneStr) return '';
+    // 2. Clean the number, removing all spaces, parentheses, dashes, etc.
+    const cleaned = ('' + phoneStr).replace(/\D/g, '');
+    if (cleaned === '') return '';
+    // 3. Look up the country's dialing code.
+    const code = countryDialingCodes[country];
+    // 4. If we don't know the country, we can't do much. Just return the cleaned number.
+    if (!code) {
+        return cleaned;
+    }
+    // 5. If the number already starts with the correct country code, just add a '+'
+    if (cleaned.startsWith(code)) {
+        return `+${cleaned}`;
+    }
+    // 6. Special case for US numbers that might be missing the leading '1'
+    if (code === '1' && cleaned.length === 10) {
+        return `+1${cleaned}`;
+    }
+    // 7. For all other cases, prepend the code and the '+'
+    return `+${code}${cleaned}`;
+}
     </script>
 </body>
 </html>
