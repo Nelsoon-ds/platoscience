@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Neurofeedback Provider Directory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Off-white, Sage Green, Soft Ochre) -->
+    <!-- Application Structure Plan: A task-oriented interactive dashboard. Users select their primary goal (Sales, Partnership, or Research) which dynamically filters the view to show the most relevant strategies and a pre-filtered directory of resources. This is more efficient than a linear report, guiding users directly to actionable information based on their intent. -->
+    <!-- Visualization & Content Choices: Goal: Compare source types -> Viz: Chart.js Scatter Plot (Volume vs. Quality) -> Interaction: Hover for details, click to filter. Justification: Visually summarizes the core trade-off of the report instantly. Goal: Provide access to resources -> Viz: Filterable HTML Table -> Interaction: Filter by category, search. Justification: Manages the large list of links effectively. Goal: Show regional context -> Viz: Tabbed/Accordion Text Blocks -> Interaction: Click to reveal. Justification: Simpler and more effective than a map for the given text. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #3d405b;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-button.active, .nav-button:hover {
+            border-bottom-color: #81b29a;
+            color: #3d405b;
+        }
+        .goal-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .goal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 450px;
+            }
+        }
+        .table-link {
+            color: #81b29a;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .table-link:hover {
+            color: #6a947e;
+        }
+        .filter-btn.active {
+            background-color: #3d405b;
+            color: #f4f1de;
+        }
+        .filter-btn {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="min-h-screen">
+        <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <h1 class="text-2xl font-bold text-[#3d405b]">Neurofeedback Provider Directory</h1>
+                    <nav class="hidden md:flex space-x-8">
+                        <button onclick="showView('dashboard')" class="nav-button active" data-nav="dashboard">Dashboard</button>
+                        <button onclick="showView('directory')" class="nav-button" data-nav="directory">Full Directory</button>
+                        <button onclick="showView('regional')" class="nav-button" data-nav="regional">Regional Analysis</button>
+                    </nav>
+                    <div class="md:hidden">
+                        <select id="mobile-nav" class="bg-white border border-gray-300 rounded-md py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-[#81b29a] focus:border-transparent">
+                            <option value="dashboard">Dashboard</option>
+                            <option value="directory">Full Directory</option>
+                            <option value="regional">Regional Analysis</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="main-content" class="container mx-auto p-4 sm:p-6 lg:p-8">
+            
+            <div id="dashboard-view">
+                <section id="intro" class="text-center mb-12">
+                    <h2 class="text-4xl font-bold tracking-tight text-[#3d405b] sm:text-5xl">Navigate a Fragmented Landscape</h2>
+                    <p class="mt-6 text-lg leading-8 text-gray-600 max-w-3xl mx-auto">The global provider ecosystem for QEEG, EEG, and neurofeedback is a complex mosaic of distinct, often overlapping, communities. This interactive tool is designed to help you find the right providers by aligning your search with your strategic goals.</p>
+                </section>
+
+                <section id="goal-selector" class="mb-12">
+                    <h3 class="text-2xl font-semibold text-center mb-8 text-[#3d405b]">What is Your Primary Objective?</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div onclick="selectGoal('sales')" class="goal-card cursor-pointer bg-white p-8 rounded-xl shadow-md border border-transparent hover:border-[#e07a5f]">
+                            <div class="text-3xl mb-4 text-[#e07a5f]">📈</div>
+                            <h4 class="text-xl font-bold mb-2">Mass-Market Sales</h4>
+                            <p class="text-gray-600">Generate the largest possible list of commercially active providers for marketing campaigns and broad outreach.</p>
+                        </div>
+                        <div onclick="selectGoal('partnership')" class="goal-card cursor-pointer bg-white p-8 rounded-xl shadow-md border border-transparent hover:border-[#81b29a]">
+                            <div class="text-3xl mb-4 text-[#81b29a]">🤝</div>
+                            <h4 class="text-xl font-bold mb-2">High-Quality Partnerships</h4>
+                            <p class="text-gray-600">Identify credible, certified, and professionally active providers for partnerships or reference sites.</p>
+                        </div>
+                        <div onclick="selectGoal('research')" class="goal-card cursor-pointer bg-white p-8 rounded-xl shadow-md border border-transparent hover:border-[#3d405b]">
+                            <div class="text-3xl mb-4 text-[#3d405b]">🔬</div>
+                            <h4 class="text-xl font-bold mb-2">Scientific Engagement</h4>
+                            <p class="text-gray-600">Find top-tier academic and clinical researchers (KOLs) for scientific advisory or validation studies.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="strategy-display" class="bg-white p-8 rounded-xl shadow-lg mb-12" style="display: none;">
+                    <div class="flex justify-between items-start">
+                        <h3 id="strategy-title" class="text-2xl font-bold text-[#3d405b] mb-4"></h3>
+                        <button onclick="resetDashboard()" class="text-gray-500 hover:text-gray-800">&times; Reset</button>
+                    </div>
+                    <p id="strategy-text" class="text-gray-700 leading-relaxed"></p>
+                </section>
+
+                <section id="comparison-chart" class="mb-12 bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-semibold text-center mb-2 text-[#3d405b]">Source Category Analysis</h3>
+                    <p class="text-center text-gray-600 mb-6">Compare directory types by their potential for lead volume versus quality.</p>
+                    <div class="chart-container">
+                        <canvas id="sourceComparisonChart"></canvas>
+                    </div>
+                </section>
+            </div>
+
+            <div id="directory-view" style="display: none;">
+                <section id="directory-table-section">
+                     <h2 class="text-3xl font-bold text-center mb-4 text-[#3d405b]">Comprehensive Provider Directory</h2>
+                     <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">This directory compiles all identified resources. Use the filters to narrow your search by source category or use the search box to find specific keywords. Each source category has unique strengths for finding providers.</p>
+                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                            <div class="w-full md:w-auto flex flex-wrap gap-2 justify-center" id="filter-buttons">
+                            </div>
+                            <input type="text" id="searchInput" placeholder="Search directory..." class="w-full md:w-1/3 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#81b29a] focus:outline-none">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Directory Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Focus</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="directory-tbody" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div id="regional-view" style="display: none;">
+                <section id="regional-analysis-section">
+                    <h2 class="text-3xl font-bold text-center mb-4 text-[#3d405b]">Regional Market Analysis</h2>
+                    <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">The provider landscape varies significantly by region. Select a market below to understand its unique characteristics, level of maturity, and key resources for provider identification.</p>
+                    <div class="max-w-4xl mx-auto">
+                        <div id="accordion-container"></div>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const directoryData = [
+            { name: "BrainMaster Practitioner Finder", url: "https://brainmaster.com/find-a-clinician/", category: "Manufacturer", focus: "Global", notes: "Ecosystem for BrainMaster hardware/software. Good for finding users of a specific platform." },
+            { name: "Neuroelectrics Distributor List", url: "https://www.neuroelectrics.com/about-us/distributors", category: "Manufacturer", focus: "Global", notes: "B2B list of regional distributors, not end-user clinicians. Requires a two-step approach." },
+            { name: "ANT Neuro Offices", url: "https://www.medicalexpo.com/soc/ant-neuro-84713.html", category: "Manufacturer", focus: "Global", notes: "Lists direct corporate offices in key markets (NL, DE, UK, US, HK, AU). B2B focus." },
+            { name: "Medtronic Find a Specialist", url: "https://www.medtronic.com/en-us/e/locator-neuro.html", category: "Manufacturer", focus: "Global", notes: "Broad neuroscience tool. Not specific to EEG/neurofeedback; low signal-to-noise ratio." },
+            { name: "ISNR Find a Provider", url: "https://isnr.org/find-a-provider", category: "Professional Society", focus: "Global", notes: "High-volume directory. Membership is open; does not certify competence. Excellent starting point." },
+            { name: "ISNR Member Directory", url: "https://isnr.org/member-directory", category: "Professional Society", focus: "Global", notes: "More comprehensive than the 'Find a Provider' list. Searchable by geography and specialty." },
+            { name: "BCIA Find a Practitioner", url: "https://www.bcia.org/consumers-find-a-practitioner", category: "Certification Body", focus: "Global", notes: "Gold standard for quality. Lists certified professionals (BCN) and licensure status (-L vs. -P)." },
+            { name: "ANSA Find a Practitioner", url: "https://appliedneuroscience.org.au/page-65872", category: "Professional Society", focus: "Australia", notes: "Key directory for the Australian market. Advises cross-referencing with BCIA-A." },
+            { name: "Foundation for Neurofeedback", url: "https://neurofeedbackfoundation.org/find-a-provider", category: "Professional Society", focus: "Global", notes: "A meta-directory; provides a valuable list of links to other society and regional directories." },
+            { name: "Psychology Today (Neurofeedback)", url: "https://www.psychologytoday.com/us/therapists?category=neurofeedback", category: "Patient/Commercial", focus: "Global", notes: "Very high volume. Excellent for gauging commercial activity and market density. Self-reported quality." },
+            { name: "National Neurofeedback Network", url: "https://www.nationalneurofeedbacknetwork.com/directory/", category: "Patient/Commercial", focus: "USA", notes: "High-volume, high-relevance directory specifically for US neurofeedback providers." },
+            { name: "EEG Info Provider Listing", url: "http://www.eeginfo.com/directory", category: "Patient/Commercial", focus: "Global", notes: "Commercial directory linked to the Othmer Method training ecosystem. Filterable by method/equipment." },
+            { name: "Applied Neuroscience Provider Maps", url: "https://appliedneuroscience.com/internatl-provider-map/", category: "Patient/Commercial", focus: "Global", notes: "Maps of providers using the company's specific NeuroGuide software and methods." },
+            { name: "ClinicalTrials.gov", url: "https://clinicaltrials.gov/", category: "Academic/Research", focus: "Global", notes: "Premier source for KOLs. Searchable database of clinical trials, PIs, and institutions." },
+            { name: "EU Clinical Trials Register", url: "https://www.clinicaltrialsregister.eu/", category: "Academic/Research", focus: "Europe", notes: "European equivalent of ClinicalTrials.gov. Essential for identifying European KOLs and research hubs." },
+            { name: "EBRAINS Lab Visits Directory", url: "https://www.ebrains.eu/page/lab-visits-directory", category: "Academic/Research", focus: "Europe", notes: "Directory of European neuroscience labs, often listing research focus and PIs." },
+            { name: "FENS NENS Directory", url: "https://www.fens.org/careers/networks/nens/nens-directory", category: "Academic/Research", focus: "Europe", notes: "Comprehensive list of European neuroscience graduate programs and schools." },
+        ];
+
+        const sourceComparisonData = [
+            { label: 'Manufacturer Networks', x: 2.5, y: 3, color: '#f94144' },
+            { label: 'Professional Society Rosters', x: 4, y: 3, color: '#f3722c' },
+            { label: 'Certification Body (BCIA)', x: 3, y: 4.5, color: '#81b29a' },
+            { label: 'Patient/Commercial Directories', x: 5, y: 2, color: '#f8961e' },
+            { label: 'Academic/Research Networks', x: 1, y: 5, color: '#3d405b' },
+        ];
+        
+        const regionalData = [
+            { name: "North America", content: "The most mature, diverse, and well-documented market. All source categories are strongly represented. It hosts key bodies like ISNR and BCIA, and has robust commercial directories like Psychology Today and the National Neurofeedback Network. It's a high-volume, high-opportunity market requiring a multi-pronged search strategy." },
+            { name: "United Kingdom", content: "A well-developed market with a blend of NHS involvement and a growing private sector. Major private health groups (Nuffield Health) offer EEG, and specialized clinics (Brainworks) provide innovative at-home services. Commercial directories and academic centers are strong, making it an accessible market." },
+            { name: "Germany", content: "A highly organized market strongly influenced by training institutes (AfN, IFEN) and manufacturers (Mindfield). Provider networks are often built around shared educational backgrounds or technology platforms. A targeted approach focusing on local academies and manufacturers is most effective." },
+            { name: "Australia", content: "A vibrant, community-driven market anchored by the Applied Neuroscience Society of Australasia (ANSA). There is a strong emphasis on quality control, with recommendations to verify credentials with BCIA-Australia. Providers clearly advertise advanced services like QEEG, indicating a mature market." },
+            { name: "Scandinavian Region", content: "A more fragmented and less visible online market. Sweden is the most developed, while Denmark is less visible. Provider identification requires a bottom-up approach, focusing on regional distributors, local training affiliates, and keyword searches in local languages. A top-down search from global directories is less effective here." },
+        ];
+
+        const strategies = {
+            sales: {
+                title: 'Strategy: Mass-Market Sales Campaign',
+                text: "To generate the largest possible list of commercially active providers, focus on maximizing reach and volume. Start with the highest-volume commercial directories like Psychology Today and the National Neurofeedback Network, as these capture providers with clear commercial intent. Supplement this list by acquiring member directories from major professional societies like ISNR to add individuals from the core professional community. This combined list is ideal for large-scale marketing campaigns and broad market-sizing analysis.",
+                categories: ['Patient/Commercial', 'Professional Society']
+            },
+            partnership: {
+                title: 'Strategy: High-Quality Partnership Development',
+                text: "To identify credible and professionally active providers for partnerships, focus on quality over volume. Start with the 'gold standard' source: the BCIA provider directory, prioritizing licensed (BCN-L) professionals. Cross-reference this list against member directories of societies like ISNR to find providers who are both certified and community-engaged. A final check on commercial directories can identify those who are also growth-oriented. This yields a 'Tier 1' list of the most desirable clinical partners.",
+                categories: ['Certification Body', 'Professional Society', 'Manufacturer']
+            },
+            research: {
+                title: 'Strategy: Key Opinion Leader (KOL) Engagement',
+                text: "To identify top-tier academic and clinical researchers, focus on sources that highlight innovation and scientific validation. Systematically search clinical trial registries (ClinicalTrials.gov, EU Clinical Trials Register) to find Principal Investigators and their institutions. Supplement this by identifying senior authors of highly-cited research papers on academic databases. These individuals are not sales targets; they are strategic assets for scientific advisory boards and validation studies.",
+                categories: ['Academic/Research']
+            }
+        };
+
+        let chart;
+        let currentFilter = 'All';
+
+        function renderTable(data) {
+            const tbody = document.getElementById('directory-tbody');
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">No results found.</td></tr>';
+                return;
+            }
+            data.forEach(item => {
+                const row = `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="font-medium table-link">${item.name}</a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.category}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.focus}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${item.notes}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function setupFilters() {
+            const categories = ['All', ...new Set(directoryData.map(item => item.category))];
+            const filterContainer = document.getElementById('filter-buttons');
+            filterContainer.innerHTML = '';
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.textContent = category;
+                button.className = `filter-btn px-4 py-2 border rounded-full text-sm font-medium ${currentFilter === category ? 'active' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}`;
+                button.onclick = () => {
+                    currentFilter = category;
+                    applyFilters();
+                    updateFilterButtons();
+                };
+                filterContainer.appendChild(button);
+            });
+        }
+        
+        function updateFilterButtons() {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                if (btn.textContent === currentFilter) {
+                    btn.classList.add('active');
+                    btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                }
+            });
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let filteredData = directoryData;
+
+            if (currentFilter !== 'All') {
+                filteredData = filteredData.filter(item => item.category === currentFilter);
+            }
+
+            if (searchTerm) {
+                filteredData = filteredData.filter(item => 
+                    Object.values(item).some(val => 
+                        String(val).toLowerCase().includes(searchTerm)
+                    )
+                );
+            }
+            renderTable(filteredData);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('sourceComparisonChart').getContext('2d');
+            if (chart) {
+                chart.destroy();
+            }
+            chart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: sourceComparisonData.map(d => ({
+                        label: d.label,
+                        data: [{x: d.x, y: d.y}],
+                        backgroundColor: d.color,
+                        borderColor: d.color,
+                        pointRadius: 15,
+                        pointHoverRadius: 20,
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Lead Volume Potential →',
+                                font: { size: 14 }
+                            },
+                            min: 0,
+                            max: 5.5,
+                            ticks: { display: false }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Lead Quality / Credibility →',
+                                font: { size: 14 }
+                            },
+                            min: 0,
+                            max: 5.5,
+                            ticks: { display: false }
+                        }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const datasetIndex = elements[0].datasetIndex;
+                            const category = sourceComparisonData[datasetIndex].label;
+                            if(category === 'Certification Body (BCIA)') {
+                                currentFilter = 'Certification Body';
+                            } else if (category === 'Professional Society Rosters') {
+                                currentFilter = 'Professional Society';
+                            } else {
+                                currentFilter = category;
+                            }
+                            showView('directory');
+                            applyFilters();
+                            updateFilterButtons();
+                        }
+                    }
+                }
+            });
+        }
+        
+        function setupAccordion() {
+            const container = document.getElementById('accordion-container');
+            container.innerHTML = '';
+            regionalData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'border-b border-gray-200';
+                div.innerHTML = `
+                    <button class="w-full text-left p-4 focus:outline-none" onclick="toggleAccordion(${index})">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-semibold text-[#3d405b]">${item.name}</span>
+                            <span id="accordion-icon-${index}" class="transform transition-transform duration-300">+</span>
+                        </div>
+                    </button>
+                    <div id="accordion-content-${index}" class="max-h-0 overflow-hidden transition-max-height duration-500 ease-in-out">
+                        <div class="p-4 pt-0 text-gray-600">
+                            <p>${item.content}</p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleAccordion(index) {
+            const content = document.getElementById(`accordion-content-${index}`);
+            const icon = document.getElementById(`accordion-icon-${index}`);
+            const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+
+            if (isOpen) {
+                content.style.maxHeight = '0px';
+                icon.classList.remove('rotate-45');
+            } else {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                icon.classList.add('rotate-45');
+            }
+        }
+        
+        function showView(viewName) {
+            document.getElementById('dashboard-view').style.display = 'none';
+            document.getElementById('directory-view').style.display = 'none';
+            document.getElementById('regional-view').style.display = 'none';
+            
+            document.getElementById(`${viewName}-view`).style.display = 'block';
+            
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.dataset.nav === viewName) {
+                    btn.classList.add('active');
+                }
+            });
+            document.getElementById('mobile-nav').value = viewName;
+            
+            if (viewName === 'directory') {
+                applyFilters();
+            }
+        }
+        
+        function selectGoal(goal) {
+            const strategy = strategies[goal];
+            document.getElementById('strategy-title').textContent = strategy.title;
+            document.getElementById('strategy-text').textContent = strategy.text;
+            document.getElementById('strategy-display').style.display = 'block';
+
+            currentFilter = 'All';
+            showView('directory');
+            
+            const filteredData = directoryData.filter(item => strategy.categories.includes(item.category));
+            renderTable(filteredData);
+            
+            window.scrollTo({ top: document.getElementById('directory-view').offsetTop - 80, behavior: 'smooth' });
+        }
+        
+        function resetDashboard() {
+            document.getElementById('strategy-display').style.display = 'none';
+            showView('dashboard');
+            currentFilter = 'All';
+            applyFilters();
+            updateFilterButtons();
+        }
+
+        window.onload = () => {
+            renderTable(directoryData);
+            setupFilters();
+            initChart();
+            setupAccordion();
+
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('mobile-nav').addEventListener('change', (e) => showView(e.target.value));
+        };
+    </script>
+</body>
+</html>
