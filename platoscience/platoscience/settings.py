@@ -14,6 +14,28 @@ NEWSPIDER_MODULE = "platoscience.spiders"
 
 ADDONS = {}
 
+# --- CUSTOM SETTINGS FOR BRAINSWAY SPIDER ---
+
+KEYWORDS_TO_FIND = [
+    "tms", "rtms", "dtms", "tbs", "eeg", "qeeg", "neurofeedback", 
+    "biofeedback", "neuromodulation", "brain mapping", "erp", 
+    "depression", "mdd", "ocd", "anxiety", "ptsd", "adhd", "add", 
+    "peak performance", "cognitive enhancement", "stroke rehabilitation", 
+    "chronic pain", "migraine", "psychiatrist", "neurologist", 
+    "neuropsychologist", "therapist", "bcn", "qeeg-d", 
+    "mental health professional", "behavioral health", "clinic", 
+    "wellness center", "rehabilitation center", "private practice", 
+    "hospital", "neuroscience center", "university research", 
+    "clinical trials", "telehealth", "telepsychiatry", "digital health", 
+    "brain stimulation", "neurotechnology", "mental wellness", 
+    "non-invasive treatment", "integrative medicine"
+]
+
+ABOUT_PAGE_KEYWORDS = [
+    'about', 'team', 'story', 'mission', 'vision', 
+    'clinic', 'company', 'who-we-are', 'our-practice'
+]
+
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = "platoscience (+http://www.yourdomain.com)"
