@@ -1,482 +1,768 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lead Generation Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .table-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-        .table-scrollbar::-webkit-scrollbar-thumb { background-color: #a0aec0; border-radius: 10px; }
-        .table-scrollbar::-webkit-scrollbar-track { background-color: #edf2f7; }
-        .stat-card {
-            transition: transform 0.2s ease-in-out;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        .sortable:hover {
-            cursor: pointer;
-            background-color: #f0f4f8;
-        }
-        .pagination-btn {
-            @apply inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 text-gray-800">
-
-    <div class="container mx-auto p-4 md:p-8">
-        <header class="mb-8">
-            <h1 class="text-4xl font-bold text-gray-900">Platoscience Lead Dashboard</h1>
-            <p class="text-lg text-gray-600">Clinics providing TMS</p>
-        </header>
-
-        <!-- File Upload Section -->
-        <div class="bg-white p-4 rounded-lg shadow-md mb-6">
-            <label for="jsonUpload" class="block text-sm font-medium text-gray-700 mb-2">Load Clinic Data:</label>
-            <input type="file" id="jsonUpload" accept=".json" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-            <p id="file-upload-status" class="text-sm text-gray-500 mt-2"></p>
-        </div>
-
-        <!-- Statistics Section -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-lg shadow-md stat-card">
-                <h3 class="text-gray-500 text-sm font-medium">Total Leads</h3>
-                <p id="totalLeadsStat" class="text-3xl font-bold text-gray-900">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md stat-card">
-                <h3 class="text-gray-500 text-sm font-medium">Leads with Email</h3>
-                <p id="emailLeadsStat" class="text-3xl font-bold text-green-600">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md stat-card">
-                <h3 class="text-gray-500 text-sm font-medium">Leads with Phone</h3>
-                <p id="phoneLeadsStat" class="text-3xl font-bold text-blue-600">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md stat-card">
-                <h3 class="text-gray-500 text-sm font-medium">Countries Represented</h3>
-                <p id="countryCountStat" class="text-3xl font-bold text-purple-600">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md stat-card">
-                <h3 id="continentLeadsTitle" class="text-gray-500 text-sm font-medium">Leads in Continent</h3>
-                <p id="continentLeadsStat" class="text-3xl font-bold text-orange-600">N/A</p>
-            </div>
-        </div>
-
-        <!-- Filter and Search Controls -->
-        <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row gap-4 items-center flex-wrap">
-            <div class="relative flex-grow w-full sm:w-auto">
-                <input type="text" id="searchInput" placeholder="Search by name, country, or city..."
-                       class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
-             <select id="continentFilter" class="w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Continents</option>
-            </select>
-            <select id="countryFilter" class="w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Countries</option>
-            </select>
-            <select id="contactFilter" class="w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Contacts</option>
-                <option value="phoneAndEmail">Has Phone & Email</option>
-                <option value="phoneOnly">Has Phone</option>
-                <option value="emailOnly">Has Email</option>
-            </select>
-            <div class="text-right text-gray-600 font-medium w-full sm:w-auto sm:ml-auto">
-                <span id="clinicCount">0</span> clinics found
-            </div>
-        </div>
-
-        <!-- Main Table -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="overflow-x-auto table-scrollbar">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="p-4 font-semibold sortable" data-sort="name">Name</th>
-                            <th class="p-4 font-semibold sortable" data-sort="country">Location</th>
-                            <th class="p-4 font-semibold">Contact</th>
-                            <th class="p-4 font-semibold sortable" data-sort="score">Lead Score</th>
-                            <th class="p-4 font-semibold">Source</th>
-                            <th class="p-4 font-semibold">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clinicTableBody">
-                        <tr><td colspan="6" class="p-4 text-center text-gray-500">Please upload your 'master_clinic_list.json' file to begin.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-             <!-- Pagination Controls -->
-            <div id="paginationControls" class="p-4 flex items-center justify-between border-t border-gray-200">
-                <!-- Will be populated by JS -->
-            </div>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const tableBody = document.getElementById('clinicTableBody');
-            const searchInput = document.getElementById('searchInput');
-            const countryFilter = document.getElementById('countryFilter');
-            const continentFilter = document.getElementById('continentFilter');
-            const contactFilter = document.getElementById('contactFilter');
-            const clinicCount = document.getElementById('clinicCount');
-            const jsonUpload = document.getElementById('jsonUpload');
-            const uploadStatus = document.getElementById('file-upload-status');
-            const paginationControls = document.getElementById('paginationControls');
-
-            const totalLeadsStat = document.getElementById('totalLeadsStat');
-            const emailLeadsStat = document.getElementById('emailLeadsStat');
-            const phoneLeadsStat = document.getElementById('phoneLeadsStat');
-            const countryCountStat = document.getElementById('countryCountStat');
-            const continentLeadsStat = document.getElementById('continentLeadsStat');
-            const continentLeadsTitle = document.getElementById('continentLeadsTitle');
-
-            let allClinics = [];
-            let filteredClinics = [];
-            let leadStatuses = {};
-            let currentSort = { key: 'score', direction: 'desc' };
-            let currentPage = 1;
-            const rowsPerPage = 20;
-
-            const countryToContinent = {
-                'USA': 'North America', 'United States': 'North America', 'Canada': 'North America', 'Mexico': 'North America',
-                'Germany': 'Europe', 'United Kingdom': 'Europe', 'France': 'Europe', 'Italy': 'Europe', 'Spain': 'Europe', 'Switzerland': 'Europe', 'Austria': 'Europe', 'Belgium': 'Europe', 'Netherlands': 'Europe', 'Sweden': 'Europe', 'Norway': 'Europe', 'Denmark': 'Europe', 'Finland': 'Europe', 'Ireland': 'Europe', 'Portugal': 'Europe', 'Greece': 'Europe', 'Poland': 'Europe', 'Hungary': 'Europe', 'Croatia': 'Europe', 'Ukraine': 'Europe',
-                'Australia': 'Oceania',
-                'Japan': 'Asia', 'Israel': 'Asia', 'Turkey': 'Asia', 'Thailand': 'Asia', 'Taiwan': 'Asia', 'Hong Kong': 'Asia', 'Singapore': 'Asia', 'India': 'Asia', 'Philippines': 'Asia', 'Nepal': 'Asia',
-                'South Africa': 'Africa',
-                'Brazil': 'South America', 'Ecuador': 'South America', 'Chile': 'South America', 'Peru': 'South America', 'Paraguay': 'South America'
-            };
-
-            function handleFileUpload(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        allClinics = JSON.parse(e.target.result);
-                        allClinics.forEach(c => {
-                           c.continent = countryToContinent[c.country] || 'Other';
-                        });
-                        uploadStatus.textContent = `Successfully loaded ${allClinics.length} clinics from ${file.name}.`;
-                        uploadStatus.className = 'text-sm text-green-600 mt-2';
-                        loadStatuses();
-                        populateContinentFilter();
-                        populateCountryFilter();
-                        updateStatistics();
-                        filterData();
-                    } catch (error) {
-                        uploadStatus.textContent = `Error parsing JSON file: ${error.message}`;
-                        uploadStatus.className = 'text-sm text-red-600 mt-2';
-                    }
-                };
-                reader.readAsText(file);
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Lead Generation Dashboard</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: "Inter", sans-serif;
             }
-            /*             * Calculate lead score based on email, phone, and website presence.
-             * Adjust scoring logic as needed.
+            .table-scrollbar::-webkit-scrollbar {
+                width: 5px;
+                height: 5px;
+            }
+            .table-scrollbar::-webkit-scrollbar-thumb {
+                background-color: #a0aec0;
+                border-radius: 10px;
+            }
+            .table-scrollbar::-webkit-scrollbar-track {
+                background-color: #edf2f7;
+            }
+            .stat-card {
+                transition: transform 0.2s ease-in-out;
+            }
+            .stat-card:hover {
+                transform: translateY(-5px);
+            }
+            .sortable {
+                cursor: pointer;
+            }
+            .sortable:hover {
+                background-color: #f0f4f8;
+            }
+            .pagination-btn {
+                @apply inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-100 text-gray-800">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="mb-8">
+                <h1 class="text-4xl font-bold text-gray-900">
+                    Platoscience Lead Dashboard
+                </h1>
+                <p class="text-lg text-gray-600">Clinics providing TMS</p>
+            </header>
+
+            <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <label
+                    for="jsonUpload"
+                    class="block text-sm font-medium text-gray-700 mb-2"
+                    >Load Clinic Data:</label
+                >
+                <input
+                    type="file"
+                    id="jsonUpload"
+                    accept=".json"
+                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <p
+                    id="file-upload-status"
+                    class="text-sm text-gray-500 mt-2"
+                ></p>
+            </div>
+
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8"
+            >
+                <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+                    <h3 class="text-gray-500 text-sm font-medium">
+                        Total Leads
+                    </h3>
+                    <p
+                        id="totalLeadsStat"
+                        class="text-3xl font-bold text-gray-900"
+                    >
+                        0
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+                    <h3 class="text-gray-500 text-sm font-medium">
+                        Leads with Email
+                    </h3>
+                    <p
+                        id="emailLeadsStat"
+                        class="text-3xl font-bold text-green-600"
+                    >
+                        0
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+                    <h3 class="text-gray-500 text-sm font-medium">
+                        Leads with Phone
+                    </h3>
+                    <p
+                        id="phoneLeadsStat"
+                        class="text-3xl font-bold text-blue-600"
+                    >
+                        0
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+                    <h3 class="text-gray-500 text-sm font-medium">
+                        Countries Represented
+                    </h3>
+                    <p
+                        id="countryCountStat"
+                        class="text-3xl font-bold text-purple-600"
+                    >
+                        0
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+                    <h3
+                        id="continentLeadsTitle"
+                        class="text-gray-500 text-sm font-medium"
+                    >
+                        Leads in Continent
+                    </h3>
+                    <p
+                        id="continentLeadsStat"
+                        class="text-3xl font-bold text-orange-600"
+                    >
+                        N/A
+                    </p>
+                </div>
+            </div>
+
+            <div
+                class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row gap-4 items-center flex-wrap"
+            >
+                <div class="relative flex-grow w-full sm:w-auto">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search by name, country, or city..."
+                        class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <svg
+                        class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        ></path>
+                    </svg>
+                </div>
+                <select
+                    id="continentFilter"
+                    class="w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">All Continents</option>
+                </select>
+                <select
+                    id="countryFilter"
+                    class="w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">All Countries</option>
+                </select>
+                <select
+                    id="contactFilter"
+                    class="w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">All Contacts</option>
+                    <option value="phoneAndEmail">Has Phone & Email</option>
+                    <option value="phoneOnly">Has Phone</option>
+                    <option value="emailOnly">Has Email</option>
+                </select>
+                <div
+                    class="text-right text-gray-600 font-medium w-full sm:w-auto sm:ml-auto"
+                >
+                    <span id="clinicCount">0</span> clinics found
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto table-scrollbar">
+                    <table class="w-full text-left">
+                        <thead
+                            class="bg-gray-50 border-b border-gray-200"
+                            id="tableHeader"
+                        >
+                            <tr>
+                                <th
+                                    class="p-4 font-semibold sortable"
+                                    data-sort="name"
+                                >
+                                    Name
+                                </th>
+                                <th
+                                    class="p-4 font-semibold sortable"
+                                    data-sort="country"
+                                >
+                                    Location
+                                </th>
+                                <th class="p-4 font-semibold">Contact</th>
+                                <th
+                                    class="p-4 font-semibold sortable"
+                                    data-sort="score"
+                                >
+                                    Lead Score
+                                </th>
+                                <th class="p-4 font-semibold">Source</th>
+                                <th class="p-4 font-semibold">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clinicTableBody">
+                            <tr>
+                                <td
+                                    colspan="6"
+                                    class="p-4 text-center text-gray-500"
+                                >
+                                    Please upload your 'master_clinic_list.json'
+                                    file to begin.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div
+                    id="paginationControls"
+                    class="p-4 flex items-center justify-between border-t border-gray-200"
+                ></div>
+            </div>
+        </div>
+
+        <script defer>
+            /**
+             * Best Practice: Use an IIFE (Immediately Invoked Function Expression) to create a private scope.
+             * This prevents variables from polluting the global 'window' object and avoids conflicts with other scripts.
              */
-            function calculateLeadScore(clinic) {
-                
-                let score = 0;
-                if (clinic.email) score += 3;
-                if (clinic.phone) score += 2;
-                if (clinic.website && clinic.website !== '#') score += 1;
-                return score;
-            }
+            (function () {
+                // --- CACHED DOM ELEMENTS ---
+                // Caching elements that are accessed frequently improves performance.
+                const tableBody = document.getElementById("clinicTableBody");
+                const tableHeader = document.getElementById("tableHeader");
+                const searchInput = document.getElementById("searchInput");
+                const countryFilter = document.getElementById("countryFilter");
+                const continentFilter =
+                    document.getElementById("continentFilter");
+                const contactFilter = document.getElementById("contactFilter");
+                const clinicCount = document.getElementById("clinicCount");
+                const jsonUpload = document.getElementById("jsonUpload");
+                const uploadStatus =
+                    document.getElementById("file-upload-status");
+                const paginationControls =
+                    document.getElementById("paginationControls");
+                const totalLeadsStat =
+                    document.getElementById("totalLeadsStat");
+                const emailLeadsStat =
+                    document.getElementById("emailLeadsStat");
+                const phoneLeadsStat =
+                    document.getElementById("phoneLeadsStat");
+                const countryCountStat =
+                    document.getElementById("countryCountStat");
+                const continentLeadsStat =
+                    document.getElementById("continentLeadsStat");
+                const continentLeadsTitle = document.getElementById(
+                    "continentLeadsTitle"
+                );
 
-            function updateStatistics() {
-                totalLeadsStat.textContent = allClinics.length;
-                emailLeadsStat.textContent = allClinics.filter(c => c.email).length;
-                phoneLeadsStat.textContent = allClinics.filter(c => c.phone).length;
-                countryCountStat.textContent = [...new Set(allClinics.map(c => c.country).filter(c => c && c !== 'N/A'))].length;
-            }
+                // --- STATE MANAGEMENT ---
+                let allClinics = [];
+                let filteredClinics = [];
+                let leadStatuses = {};
+                let currentSort = { key: "score", direction: "desc" };
+                let currentPage = 1;
+                const rowsPerPage = 20;
 
-            function populateContinentFilter() {
-                continentFilter.innerHTML = '<option value="">All Continents</option>';
-                const continents = [...new Set(allClinics.map(c => c.continent))].sort();
-                continents.forEach(continent => {
-                    const option = document.createElement('option');
-                    option.value = continent;
-                    option.textContent = continent;
-                    continentFilter.appendChild(option);
-                });
-            }
+                // --- DATA & CONFIGURATION ---
+                const countryToContinent = {
+                    USA: "North America",
+                    "United States": "North America",
+                    Canada: "North America",
+                    Mexico: "North America",
+                    Germany: "Europe",
+                    "United Kingdom": "Europe",
+                    France: "Europe",
+                    Italy: "Europe",
+                    Spain: "Europe",
+                    Switzerland: "Europe",
+                    Austria: "Europe",
+                    Belgium: "Europe",
+                    Netherlands: "Europe",
+                    Sweden: "Europe",
+                    Norway: "Europe",
+                    Denmark: "Europe",
+                    Finland: "Europe",
+                    Ireland: "Europe",
+                    Portugal: "Europe",
+                    Greece: "Europe",
+                    Poland: "Europe",
+                    Hungary: "Europe",
+                    Croatia: "Europe",
+                    Ukraine: "Europe",
+                    Australia: "Oceania",
+                    Japan: "Asia",
+                    Israel: "Asia",
+                    Turkey: "Asia",
+                    Thailand: "Asia",
+                    Taiwan: "Asia",
+                    "Hong Kong": "Asia",
+                    Singapore: "Asia",
+                    India: "Asia",
+                    Philippines: "Asia",
+                    Nepal: "Asia",
+                    "South Africa": "Africa",
+                    Brazil: "South America",
+                    Ecuador: "South America",
+                    Chile: "South America",
+                    Peru: "South America",
+                    Paraguay: "South America",
+                };
 
-            function populateCountryFilter(selectedContinent = '') {
-                countryFilter.innerHTML = '<option value="">All Countries</option>';
-                const countries = [...new Set(allClinics
-                    .filter(c => selectedContinent ? c.continent === selectedContinent : true)
-                    .map(c => c.country)
-                    .filter(Boolean))]
-                    .sort();
-                
-                countries.forEach(country => {
-                    const option = document.createElement('option');
-                    option.value = country;
-                    option.textContent = country;
-                    countryFilter.appendChild(option);
-                });
-            }
+                const countryDialingCodes = {
+                    USA: "1",
+                    "United States": "1",
+                    Canada: "1",
+                    Mexico: "52",
+                    Germany: "49",
+                    "United Kingdom": "44",
+                    France: "33",
+                    Italy: "39",
+                    Spain: "34",
+                    Switzerland: "41",
+                    Austria: "43",
+                    Belgium: "32",
+                    Netherlands: "31",
+                    Sweden: "46",
+                    Norway: "47",
+                    Denmark: "45",
+                    Finland: "358",
+                    Ireland: "353",
+                    Portugal: "351",
+                    Greece: "30",
+                    Poland: "48",
+                    Hungary: "36",
+                    Croatia: "385",
+                    Ukraine: "380",
+                    Australia: "61",
+                    "New Zealand": "64",
+                    Japan: "81",
+                    Israel: "972",
+                    Turkey: "90",
+                    Thailand: "66",
+                    Taiwan: "886",
+                    "Hong Kong": "852",
+                    Singapore: "65",
+                    India: "91",
+                    Philippines: "63",
+                    Nepal: "977",
+                    "South Africa": "27",
+                    Brazil: "55",
+                    Ecuador: "593",
+                    Chile: "56",
+                    Peru: "51",
+                    Paraguay: "595",
+                };
 
-            function renderTable() {
-    tableBody.innerHTML = '';
-    
-    const scoredClinics = filteredClinics.map(clinic => ({...clinic, score: calculateLeadScore(clinic)}));
-    
-    scoredClinics.sort((a, b) => {
-        const valA = a[currentSort.key];
-        const valB = b[currentSort.key];
-        let comparison = 0;
-        if (valA > valB) {
-            comparison = 1;
-        } else if (valA < valB) {
-            comparison = -1;
-        }
-        return currentSort.direction === 'asc' ? comparison : -comparison;
-    });
+                // --- CORE FUNCTIONS ---
 
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedClinics = scoredClinics.slice(startIndex, endIndex);
-    
-    if (paginatedClinics.length === 0 && currentPage === 1) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No clinics match your search.</td></tr>';
-    }
+                function handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
 
-    paginatedClinics.forEach((clinic) => {
-        const status = leadStatuses[clinic.name] || 'New';
-        const sanitizedName = (clinic.name || '').replace(/["“”]/g, '&quot;').replace(/'/g, '&#39;');
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        try {
+                            const rawData = JSON.parse(e.target.result);
+                            // Performance: Pre-calculate score and continent once on load.
+                            allClinics = rawData.map((c) => ({
+                                ...c,
+                                continent:
+                                    countryToContinent[c.country] || "Other",
+                                score: calculateLeadScore(c),
+                            }));
 
-        // Helper constants to clean up data before rendering
-        const clinicAddress = clinic.address && clinic.address !== 'N/A' ? clinic.address : '';
-        const clinicCity = clinic.city && clinic.city !== 'N/A' ? clinic.city : '';
-        const clinicCountry = clinic.country && clinic.country !== 'N/A' ? clinic.country : '';
-        const clinicWebsite = clinic.website && clinic.website !== '#' ? clinic.website : '';
+                            uploadStatus.textContent = `Successfully loaded ${allClinics.length} clinics from ${file.name}.`;
+                            uploadStatus.className =
+                                "text-sm text-green-600 mt-2";
 
-        const row = `
-            <tr class="border-b border-gray-200 hover:bg-gray-50">
-                <td class="p-4 align-top max-w-xs">
-                    <div class="font-bold text-gray-900 truncate" title="${clinic.name}">${clinic.name}</div>
-                    ${clinicWebsite ? `<a href="${clinicWebsite}" target="_blank" class="text-blue-600 hover:underline text-sm truncate block" title="${clinicWebsite}">${clinicWebsite}</a>` : ''}
-                </td>
-                <td class="p-4 align-top text-sm text-gray-600 max-w-sm">
-                    <div class="truncate" title="${clinicAddress}">${clinicAddress}</div>
-                    <span class="font-medium">${clinicCity ? `${clinicCity}, ` : ''}${clinicCountry}</span>
-                </td>
-                <td class="p-4 align-top text-sm max-w-xs">
-                    ${clinic.email ? `<div class="truncate" title="${clinic.email}"><a href="mailto:${clinic.email}" class="text-blue-600 hover:underline">${clinic.email}</a></div>` : ''}
-${clinic.phone ? `<a href="tel:${formatPhoneNumber(clinic.phone, clinic.country)}" class="text-blue-600 hover:underline">${formatPhoneNumber(clinic.phone, clinic.country)}</a>` : ''}                </td>
-                <td class="p-4 align-top text-center font-bold text-lg ${clinic.score > 4 ? 'text-green-600' : clinic.score > 2 ? 'text-yellow-600' : 'text-red-600'}">${clinic.score}</td>
-                <td class="p-4 align-top text-sm text-gray-500">${clinic.source}</td>
-                <td class="p-4 align-top">
-                    <select class="status-dropdown p-2 border border-gray-300 rounded-md" data-clinic-name="${sanitizedName}">
-                        <option value="New" ${status === 'New' ? 'selected' : ''}>New</option>
-                        <option value="Contacted" ${status === 'Contacted' ? 'selected' : ''}>Contacted</option>
-                        <option value="Engaged" ${status === 'Engaged' ? 'selected' : ''}>Engaged</option>
-                        <option value="Qualified" ${status === 'Qualified' ? 'selected' : ''}>Qualified</option>
-                        <option value="Not a Fit" ${status === 'Not a Fit' ? 'selected' : ''}>Not a Fit</option>
-                    </select>
-                </td>
-            </tr>
-        `;
-        tableBody.innerHTML += row;
-    });
-    
-    clinicCount.textContent = filteredClinics.length;
-    renderPaginationControls(filteredClinics.length);
-    addStatusListeners();
-}
-
-            function renderPaginationControls(totalItems) {
-                paginationControls.innerHTML = '';
-                const totalPages = Math.ceil(totalItems / rowsPerPage);
-                if (totalPages <= 1) return;
-
-                const startItem = (currentPage - 1) * rowsPerPage + 1;
-                const endItem = Math.min(currentPage * rowsPerPage, totalItems);
-
-                const summary = document.createElement('p');
-                summary.className = 'text-sm text-gray-700';
-                summary.textContent = `Showing ${startItem} to ${endItem} of ${totalItems} results`;
-
-                const buttonsDiv = document.createElement('div');
-                buttonsDiv.className = 'flex gap-2';
-
-                const prevButton = document.createElement('button');
-                prevButton.textContent = 'Previous';
-                prevButton.className = 'pagination-btn';
-                prevButton.disabled = currentPage === 1;
-                prevButton.addEventListener('click', () => {
-                    currentPage--;
-                    renderTable();
-                });
-
-                const nextButton = document.createElement('button');
-                nextButton.textContent = 'Next';
-                nextButton.className = 'pagination-btn';
-                nextButton.disabled = currentPage === totalPages;
-                nextButton.addEventListener('click', () => {
-                    currentPage++;
-                    renderTable();
-                });
-                
-                buttonsDiv.appendChild(prevButton);
-                buttonsDiv.appendChild(nextButton);
-                paginationControls.appendChild(summary);
-                paginationControls.appendChild(buttonsDiv);
-            }
-            
-            function filterData() {
-                const searchTerm = searchInput.value.toLowerCase();
-                const selectedCountry = countryFilter.value;
-                const selectedContinent = continentFilter.value;
-                const selectedContact = contactFilter.value;
-
-                filteredClinics = allClinics.filter(clinic => {
-                    const matchesSearch = (
-                        clinic.name.toLowerCase().includes(searchTerm) ||
-                        (clinic.country && clinic.country.toLowerCase().includes(searchTerm)) ||
-                        (clinic.city && clinic.city.toLowerCase().includes(searchTerm))
-                    );
-                    const matchesContinent = selectedContinent ? clinic.continent === selectedContinent : true;
-                    const matchesCountry = selectedCountry ? clinic.country === selectedCountry : true;
-                    const matchesContact = (
-                        !selectedContact ||
-                        (selectedContact === 'phoneAndEmail' && clinic.phone && clinic.email) ||
-                        (selectedContact === 'phoneOnly' && clinic.phone) ||
-                        (selectedContact === 'emailOnly' && clinic.email)
-                    );
-                    return matchesSearch && matchesContinent && matchesCountry && matchesContact;
-                });
-                
-                currentPage = 1;
-
-                if (selectedContinent) {
-                    continentLeadsTitle.textContent = `Leads in ${selectedContinent}`;
-                    const continentCount = allClinics.filter(c => c.continent === selectedContinent).length;
-                    continentLeadsStat.textContent = continentCount;
-                } else {
-                    continentLeadsTitle.textContent = 'Leads in Continent';
-                    continentLeadsStat.textContent = 'N/A';
+                            // Initialize the application state
+                            loadStatuses();
+                            populateFilters();
+                            updateStatistics();
+                            filterAndRender();
+                        } catch (error) {
+                            uploadStatus.textContent = `Error parsing JSON file: ${error.message}`;
+                            uploadStatus.className =
+                                "text-sm text-red-600 mt-2";
+                        }
+                    };
+                    reader.readAsText(file);
                 }
 
-                renderTable();
-            }
-
-            function saveStatus(clinicName, status) {
-                leadStatuses[clinicName] = status;
-                localStorage.setItem('leadStatuses', JSON.stringify(leadStatuses));
-            }
-
-            function loadStatuses() {
-                const saved = localStorage.getItem('leadStatuses');
-                if (saved) {
-                    leadStatuses = JSON.parse(saved);
+                function calculateLeadScore(clinic) {
+                    let score = 0;
+                    if (clinic.email) score += 3;
+                    if (clinic.phone) score += 2;
+                    if (clinic.website && clinic.website !== "#") score += 1;
+                    return score;
                 }
-            }
-            
-            function addStatusListeners() {
-                document.querySelectorAll('.status-dropdown').forEach(dropdown => {
-                    dropdown.addEventListener('change', (e) => {
-                        const clinicName = e.target.dataset.clinicName;
-                        const newStatus = e.target.value;
-                        saveStatus(clinicName, newStatus);
+
+                function filterAndRender() {
+                    const searchTerm = searchInput.value.toLowerCase();
+                    const selectedCountry = countryFilter.value;
+                    const selectedContinent = continentFilter.value;
+                    const selectedContact = contactFilter.value;
+
+                    filteredClinics = allClinics.filter((clinic) => {
+                        const matchesSearch =
+                            !searchTerm ||
+                            (clinic.name &&
+                                clinic.name
+                                    .toLowerCase()
+                                    .includes(searchTerm)) ||
+                            (clinic.country &&
+                                clinic.country
+                                    .toLowerCase()
+                                    .includes(searchTerm)) ||
+                            (clinic.city &&
+                                clinic.city.toLowerCase().includes(searchTerm));
+                        const matchesContinent =
+                            !selectedContinent ||
+                            clinic.continent === selectedContinent;
+                        const matchesCountry =
+                            !selectedCountry ||
+                            clinic.country === selectedCountry;
+                        const matchesContact =
+                            !selectedContact ||
+                            (selectedContact === "phoneAndEmail" &&
+                                clinic.phone &&
+                                clinic.email) ||
+                            (selectedContact === "phoneOnly" && clinic.phone) ||
+                            (selectedContact === "emailOnly" && clinic.email);
+                        return (
+                            matchesSearch &&
+                            matchesContinent &&
+                            matchesCountry &&
+                            matchesContact
+                        );
                     });
-                });
-            }
 
-            function handleSort(e) {
-                const key = e.target.dataset.sort;
-                if (currentSort.key === key) {
-                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-                } else {
-                    currentSort.key = key;
-                    currentSort.direction = 'asc';
+                    currentPage = 1; // Reset to first page on any filter change
+                    sortAndRenderTable();
+                    updateContinentStat(selectedContinent);
                 }
-                renderTable();
-            }
 
-            searchInput.addEventListener('input', filterData);
-            countryFilter.addEventListener('change', filterData);
-            continentFilter.addEventListener('change', (e) => {
-                populateCountryFilter(e.target.value);
-                filterData();
-            });
-            contactFilter.addEventListener('change', filterData);
-            jsonUpload.addEventListener('change', handleFileUpload);
-            document.querySelectorAll('.sortable').forEach(header => {
-                header.addEventListener('click', handleSort);
-            });
-        });
+                function sortAndRenderTable() {
+                    // Robustness: Handle null or undefined values during sorting.
+                    filteredClinics.sort((a, b) => {
+                        const valA = a[currentSort.key] ?? ""; // Default to empty string if null/undefined
+                        const valB = b[currentSort.key] ?? "";
+                        let comparison = valA
+                            .toString()
+                            .localeCompare(valB.toString());
+                        if (
+                            typeof valA === "number" &&
+                            typeof valB === "number"
+                        ) {
+                            comparison = valA - valB;
+                        }
+                        return currentSort.direction === "asc"
+                            ? comparison
+                            : -comparison;
+                    });
+                    renderTable();
+                }
 
-        const countryDialingCodes = {
-    // North America
-    'USA': '1',
-    'United States': '1',
-    'Canada': '1',
-    'Mexico': '52',
-    // Europe
-    'Germany': '49',
-    'United Kingdom': '44',
-    'France': '33',
-    'Italy': '39',
-    'Spain': '34',
-    'Switzerland': '41',
-    'Austria': '43',
-    'Belgium': '32',
-    'Netherlands': '31',
-    'Sweden': '46',
-    'Norway': '47',
-    'Denmark': '45',
-    'Finland': '358',
-    'Ireland': '353',
-    'Portugal': '351',
-    'Greece': '30',
-    'Poland': '48',
-    'Hungary': '36',
-    'Croatia': '385',
-    'Ukraine': '380',
-    // Oceania
-    'Australia': '61',
-    'New Zealand': '64',
-    // Asia
-    'Japan': '81',
-    'Israel': '972', 'Turkey': '90', 'Thailand': '66', 'Taiwan': '886','Hong Kong': '852',
-    'Singapore': '65', 'India': '91',
-    'Philippines': '63','Nepal': '977',
+                /**
+                 * Performance: This function now builds a single HTML string and then updates
+                 * the DOM once, which is significantly faster for large tables.
+                 */
+                function renderTable() {
+                    const startIndex = (currentPage - 1) * rowsPerPage;
+                    const endIndex = startIndex + rowsPerPage;
+                    const paginatedClinics = filteredClinics.slice(
+                        startIndex,
+                        endIndex
+                    );
 
-    // Africa
-    'South Africa': '27',
-    // South America
-    'Brazil': '55','Ecuador': '593','Chile': '56','Peru': '51','Paraguay': '595'
-};
+                    if (paginatedClinics.length === 0) {
+                        tableBody.innerHTML =
+                            '<tr><td colspan="6" class="p-4 text-center text-gray-500">No clinics match your search or no data loaded.</td></tr>';
+                    } else {
+                        const tableHTML = paginatedClinics
+                            .map((clinic) => {
+                                const status =
+                                    leadStatuses[clinic.name] || "New";
+                                // Sanitize to prevent issues with quotes in names
+                                const sanitizedName = (clinic.name || "")
+                                    .replace(/["“”]/g, "&quot;")
+                                    .replace(/'/g, "&#39;");
+                                const websiteLink =
+                                    clinic.website && clinic.website !== "#"
+                                        ? `<a href="${clinic.website}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline text-sm truncate block">${clinic.website}</a>`
+                                        : "";
+                                const emailLink = clinic.email
+                                    ? `<div class="truncate"><a href="mailto:${clinic.email}" class="text-blue-600 hover:underline">${clinic.email}</a></div>`
+                                    : "";
+                                const phoneLink = clinic.phone
+                                    ? `<a href="tel:${formatPhoneNumber(
+                                          clinic.phone,
+                                          clinic.country
+                                      )}" class="text-blue-600 hover:underline">${formatPhoneNumber(
+                                          clinic.phone,
+                                          clinic.country
+                                      )}</a>`
+                                    : "";
+                                const scoreColor =
+                                    clinic.score > 4
+                                        ? "text-green-600"
+                                        : clinic.score > 2
+                                        ? "text-yellow-600"
+                                        : "text-red-600";
 
-    function formatPhoneNumber(phoneStr, country) {
-    // 1. If there's no phone number, return an empty string.
-    if (!phoneStr) return '';
-    // 2. Clean the number, removing all spaces, parentheses, dashes, etc.
-    const cleaned = ('' + phoneStr).replace(/\D/g, '');
-    if (cleaned === '') return '';
-    // 3. Look up the country's dialing code.
-    const code = countryDialingCodes[country];
-    // 4. If we don't know the country, we can't do much. Just return the cleaned number.
-    if (!code) {
-        return cleaned;
-    }
-    // 5. If the number already starts with the correct country code, just add a '+'
-    if (cleaned.startsWith(code)) {
-        return `+${cleaned}`;
-    }
-    // 6. Special case for US numbers that might be missing the leading '1'
-    if (code === '1' && cleaned.length === 10) {
-        return `+1${cleaned}`;
-    }
-    // 7. For all other cases, prepend the code and the '+'
-    return `+${code}${cleaned}`;
-}
-    </script>
-</body>
+                                return `
+                            <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="p-4 align-top max-w-xs"><div class="font-bold text-gray-900 truncate" title="${sanitizedName}">${sanitizedName}</div>${websiteLink}</td>
+                                <td class="p-4 align-top text-sm text-gray-600 max-w-sm"><div class="truncate" title="${
+                                    clinic.address || ""
+                                }">${
+                                    clinic.address || ""
+                                }</div><span class="font-medium">${
+                                    clinic.city || ""
+                                }, ${clinic.country || ""}</span></td>
+                                <td class="p-4 align-top text-sm max-w-xs">${emailLink}${phoneLink}</td>
+                                <td class="p-4 align-top text-center font-bold text-lg ${scoreColor}">${
+                                    clinic.score
+                                }</td>
+                                <td class="p-4 align-top text-sm text-gray-500">${
+                                    clinic.source || ""
+                                }</td>
+                                <td class="p-4 align-top">
+                                    <select class="status-dropdown p-2 border border-gray-300 rounded-md" data-clinic-name="${sanitizedName}">
+                                        <option value="New" ${
+                                            status === "New" ? "selected" : ""
+                                        }>New</option>
+                                        <option value="Contacted" ${
+                                            status === "Contacted"
+                                                ? "selected"
+                                                : ""
+                                        }>Contacted</option>
+                                        <option value="Engaged" ${
+                                            status === "Engaged"
+                                                ? "selected"
+                                                : ""
+                                        }>Engaged</option>
+                                        <option value="Qualified" ${
+                                            status === "Qualified"
+                                                ? "selected"
+                                                : ""
+                                        }>Qualified</option>
+                                        <option value="Not a Fit" ${
+                                            status === "Not a Fit"
+                                                ? "selected"
+                                                : ""
+                                        }>Not a Fit</option>
+                                    </select>
+                                </td>
+                            </tr>`;
+                            })
+                            .join("");
+                        tableBody.innerHTML = tableHTML;
+                    }
+
+                    clinicCount.textContent = filteredClinics.length;
+                    renderPaginationControls(filteredClinics.length);
+                }
+
+                // --- UI UPDATE & HELPER FUNCTIONS ---
+
+                function populateFilters(selectedContinent = "") {
+                    // Populate Continents
+                    continentFilter.innerHTML =
+                        '<option value="">All Continents</option>';
+                    const continents = [
+                        ...new Set(allClinics.map((c) => c.continent)),
+                    ].sort();
+                    continents.forEach((c) =>
+                        continentFilter.add(new Option(c, c))
+                    );
+                    continentFilter.value = selectedContinent;
+
+                    // Populate Countries based on selected continent
+                    countryFilter.innerHTML =
+                        '<option value="">All Countries</option>';
+                    const countries = [
+                        ...new Set(
+                            allClinics
+                                .filter((c) =>
+                                    selectedContinent
+                                        ? c.continent === selectedContinent
+                                        : true
+                                )
+                                .map((c) => c.country)
+                                .filter(Boolean)
+                        ),
+                    ].sort();
+                    countries.forEach((c) =>
+                        countryFilter.add(new Option(c, c))
+                    );
+                }
+
+                function updateStatistics() {
+                    totalLeadsStat.textContent = allClinics.length;
+                    emailLeadsStat.textContent = allClinics.filter(
+                        (c) => c.email
+                    ).length;
+                    phoneLeadsStat.textContent = allClinics.filter(
+                        (c) => c.phone
+                    ).length;
+                    countryCountStat.textContent = [
+                        ...new Set(
+                            allClinics
+                                .map((c) => c.country)
+                                .filter((c) => c && c !== "N/A")
+                        ),
+                    ].length;
+                }
+
+                function updateContinentStat(selectedContinent) {
+                    if (selectedContinent) {
+                        continentLeadsTitle.textContent = `Leads in ${selectedContinent}`;
+                        continentLeadsStat.textContent = allClinics.filter(
+                            (c) => c.continent === selectedContinent
+                        ).length;
+                    } else {
+                        continentLeadsTitle.textContent = "Leads in Continent";
+                        continentLeadsStat.textContent = "N/A";
+                    }
+                }
+
+                function renderPaginationControls(totalItems) {
+                    paginationControls.innerHTML = "";
+                    const totalPages = Math.ceil(totalItems / rowsPerPage);
+                    if (totalPages <= 1) return;
+
+                    const startItem = (currentPage - 1) * rowsPerPage + 1;
+                    const endItem = Math.min(
+                        currentPage * rowsPerPage,
+                        totalItems
+                    );
+
+                    paginationControls.innerHTML = `
+                    <p class="text-sm text-gray-700">Showing ${startItem} to ${endItem} of ${totalItems} results</p>
+                    <div class="flex gap-2">
+                        <button id="prevPageBtn" class="pagination-btn" ${
+                            currentPage === 1 ? "disabled" : ""
+                        }>Previous</button>
+                        <button id="nextPageBtn" class="pagination-btn" ${
+                            currentPage === totalPages ? "disabled" : ""
+                        }>Next</button>
+                    </div>`;
+
+                    document
+                        .getElementById("prevPageBtn")
+                        ?.addEventListener("click", () => {
+                            currentPage--;
+                            sortAndRenderTable();
+                        });
+                    document
+                        .getElementById("nextPageBtn")
+                        ?.addEventListener("click", () => {
+                            currentPage++;
+                            sortAndRenderTable();
+                        });
+                }
+
+                // --- LOCAL STORAGE & STATUS FUNCTIONS ---
+                function saveStatus(clinicName, status) {
+                    leadStatuses[clinicName] = status;
+                    localStorage.setItem(
+                        "leadStatuses",
+                        JSON.stringify(leadStatuses)
+                    );
+                }
+
+                function loadStatuses() {
+                    const saved = localStorage.getItem("leadStatuses");
+                    if (saved) {
+                        leadStatuses = JSON.parse(saved);
+                    }
+                }
+
+                // --- EVENT LISTENERS INITIALIZATION ---
+                function initEventListeners() {
+                    // All filter changes trigger the same function
+                    [
+                        searchInput,
+                        countryFilter,
+                        continentFilter,
+                        contactFilter,
+                    ].forEach((el) => {
+                        el?.addEventListener("input", filterAndRender);
+                    });
+
+                    // Special handling for continent filter to update the country dropdown
+                    continentFilter?.addEventListener("change", (e) => {
+                        populateFilters(e.target.value);
+                        filterAndRender();
+                    });
+
+                    jsonUpload?.addEventListener("change", handleFileUpload);
+
+                    /**
+                     * Best Practice: Use event delegation for sortable headers.
+                     * A single listener on the thead is more efficient than one on each th.
+                     */
+                    tableHeader?.addEventListener("click", (e) => {
+                        const header = e.target.closest(".sortable");
+                        if (!header) return;
+
+                        const key = header.dataset.sort;
+                        if (currentSort.key === key) {
+                            currentSort.direction =
+                                currentSort.direction === "asc"
+                                    ? "desc"
+                                    : "asc";
+                        } else {
+                            currentSort.key = key;
+                            currentSort.direction = "asc";
+                        }
+                        sortAndRenderTable();
+                    });
+
+                    /**
+                     * Best Practice: Use event delegation for status dropdowns.
+                     * A single listener on the tbody handles changes for all rows.
+                     */
+                    tableBody?.addEventListener("change", (e) => {
+                        if (e.target.classList.contains("status-dropdown")) {
+                            const clinicName = e.target.dataset.clinicName;
+                            const newStatus = e.target.value;
+                            saveStatus(clinicName, newStatus);
+                        }
+                    });
+                }
+
+                function formatPhoneNumber(phoneStr, country) {
+                    if (!phoneStr) return "";
+                    const cleaned = ("" + phoneStr).replace(/\D/g, "");
+                    if (cleaned === "") return "";
+                    const code = countryDialingCodes[country];
+                    if (!code) return cleaned;
+                    if (cleaned.startsWith(code)) return `+${cleaned}`;
+                    if (code === "1" && cleaned.length === 10)
+                        return `+1${cleaned}`;
+                    return `+${code}${cleaned}`;
+                }
+
+                // --- APP INITIALIZATION ---
+                initEventListeners();
+            })(); // End of IIFE
+        </script>
+    </body>
 </html>

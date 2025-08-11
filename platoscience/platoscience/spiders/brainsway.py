@@ -4,85 +4,105 @@ import scrapy
 from twisted.internet.error import DNSLookupError, TimeoutError, TCPTimedOutError
 from scrapy.spidermiddlewares.httperror import HttpError
 from scrapy.loader import ItemLoader
-from ..items import ProviderItem # Import our new item
+# Best Practice: Use relative imports within the Scrapy project.
+from ..items import ProviderItem
 
 class BrainswaySpider(scrapy.Spider):
     """
     A Scrapy spider to crawl https://www.brainsway.com/find-a-provider/.
-    It uses an ItemLoader to structure and clean the scraped data.
+    It demonstrates a robust, multi-stage crawl pattern:
+    1. Scrape a list of provider links.
+    2. Follow each link to a detail page on brainsway.com.
+    3. Follow the external website link to the provider's own site.
+    4. Attempt to find and scrape an 'About Us' page for more detail.
+    It uses an ItemLoader for clean data population and has robust error handling.
     """
     name = 'brainsway'
     start_urls = ['https://www.brainsway.com/find-a-provider/']
 
     def parse(self, response):
-        self.log(f'Successfully fetched: {response.url}')
+        """
+        Stage 1: Fetches the main provider directory and yields requests
+        for each individual provider page.
+        """
+        self.log(f'Successfully fetched directory: {response.url}')
+        # Select all links within the main provider list.
         provider_links = response.css('ul.columns.max-3-columns a::attr(href)').getall()
+        
         if not provider_links:
-            self.log("Could not find any provider links.")
+            self.log("Could not find any provider links on the main directory page. Check CSS selector.")
             return
+            
+        self.log(f"Found {len(provider_links)} provider links. Following each...")
         for link in provider_links:
+            # For each link, schedule a request to that URL, processed by parse_provider_page.
             yield response.follow(url=link, callback=self.parse_provider_page)
 
     def parse_provider_page(self, response):
         """
-        Gathers initial provider details and passes an ItemLoader
-        to the next request.
+        Stage 2: Gathers initial details from the BrainsWay provider page
+        and initiates the crawl to the provider's external website.
         """
         self.log(f"Scraping initial details from: {response.url}")
-        website_link = response.css('div.location-contact-website a::attr(href)').get()
-        if not website_link:
-            self.log(f"No website link found for {response.url}. Skipping.")
-            return
-            
-        # 1. Create the ItemLoader, linking it to our ProviderItem
+        
+        # Best Practice: Use an ItemLoader to populate the item.
+        # This keeps the spider clean and moves data processing to items.py.
         loader = ItemLoader(item=ProviderItem(), response=response)
 
-        # 2. Add data using CSS selectors. No more .get() or .strip() needed!
-        # The processors in items.py handle that automatically.
+        # Populate fields from the brainsway.com detail page.
+        # .add_value() is for data not directly from the response (like the source URL).
         loader.add_value('source_url', response.url)
+        # .add_css() uses CSS selectors to find and automatically clean the data.
         loader.add_css('name', 'h1::text')
         loader.add_css('phone', 'div.location-contact-phone a::text')
         loader.add_css('email', 'div.location-contact-email p::text')
+        
+        website_link = response.css('div.location-contact-website a::attr(href)').get()
+        if not website_link:
+            self.log(f"No external website link found for {loader.get_output_value('name')}. Yielding partial item.")
+            yield loader.load_item() # Yield the data we have so far
+            return
+        
         loader.add_value('website_link', website_link)
 
-        # 3. Pass the loader object in the meta dict
+        # Stage 3: Follow the external website link.
+        # Pass the loader object in the meta dict to carry data to the next callback.
+        # Add robust error handling for this external request.
         yield scrapy.Request(
             url=website_link,
             callback=self.parse_external_website,
             errback=self.handle_error,
-            meta={'loader': loader} # Pass the whole loader
+            meta={'loader': loader} 
         )
 
     def parse_external_website(self, response):
         """
-        Parses the external site, finds keywords for tags, and looks
-        for a link to an "About Us" page anywhere on the page.
+        Stage 3: Parses the homepage of the provider's external site.
+        It searches for keywords and looks for a link to an "About Us" page.
         """
         loader = response.meta['loader']
-        loader.response = response
-        self.log(f"Processing external site: {loader.get_output_value('website_link')}")
+        # It's good practice to update the loader's response context.
+        loader.response = response 
+        self.log(f"Processing external site: {response.url}")
 
+        # Extract keywords from the body text to use as tags.
         body_text = ' '.join(response.xpath('//body//text()').getall()).lower()
-        tags = []
-        for keyword in self.settings.get('KEYWORDS_TO_FIND', []):
-            if keyword.lower() in body_text:
-                tags.append(keyword)
+        tags = [kw for kw in self.settings.get('KEYWORDS_TO_FIND', []) if kw.lower() in body_text]
         loader.add_value('tags', tags)
         
+        # Dynamically build an XPath to find 'About Us' style links anywhere on the page.
         about_keywords = self.settings.get('ABOUT_PAGE_KEYWORDS', [])
+        # Search for keywords in the link's text or its href attribute.
         conditions = [f"contains(translate(., '{k.upper()}', '{k}'), '{k}')" for k in about_keywords]
         conditions += [f"contains(@href, '{k}')" for k in about_keywords]
-        
-        # --- THE CHANGE IS HERE ---
-        # OLD: //footer//a[...] (Searched only in the footer)
-        # NEW: //a[...] (Searches the entire page)
         about_link_xpath = f"//a[{' or '.join(conditions)}]/@href"
         
-        about_link_selector = response.xpath(about_link_xpath).get()
+        about_link = response.xpath(about_link_xpath).get()
         
-        if about_link_selector:
-            about_url = response.urljoin(about_link_selector)
-            self.log(f"Found 'About' page via page-wide search: {about_url}")
+        if about_link:
+            about_url = response.urljoin(about_link)
+            self.log(f"Found 'About' page link: {about_url}")
+            # Stage 4: Follow the 'About' page link, continuing to pass the loader.
             yield scrapy.Request(
                 url=about_url,
                 callback=self.parse_about_page,
@@ -95,58 +115,47 @@ class BrainswaySpider(scrapy.Spider):
 
     def parse_about_page(self, response):
         """
-        Parses the 'About Us' page to get the self-description using
-        a hybrid approach for maximum reliability.
+        Stage 4: Parses the 'About Us' page to extract a description.
         """
-        # 1. Get the loader, just like before.
         loader = response.meta['loader']
+        self.log(f"Scraping description from 'About' page for {loader.get_output_value('name')}.")
 
-        # 2. Scrape the description DIRECTLY from the response, just like your old code.
-        #    This avoids any confusion with the loader's internal response.
-        #    (Note: I'm using 'p ::text' to get all text, which is a slight improvement).
+        # Join all text from paragraph tags to form the description.
         p_texts = response.css('p ::text').getall()
         description = ' '.join(text.strip() for text in p_texts if text.strip())
-
-        # 3. Use .add_value() to add the already-scraped text to the loader.
-        #    .add_value() doesn't use selectors, so it can't get confused.
         loader.add_value('self_description', description)
         
-        self.log(f"Successfully scraped description for {loader.get_output_value('name')}.")
-        
-        # 4. Yield the final, clean item.
+        # This is the final step, so we yield the fully populated item.
         yield loader.load_item()
 
+    # --- ERROR HANDLING CALLBACKS ---
+
     def handle_error(self, failure):
-            """
-            Handles errors when fetching the provider's external website.
-            It logs the error and yields the partial data collected so far.
-            """
-            loader = failure.request.meta['loader']
-            url = loader.get_output_value('website_link')
-            name = loader.get_output_value('name')
+        """
+        Handles errors for the initial external website request (Stage 3).
+        Logs the specific error and yields the item with partial data.
+        """
+        loader = failure.request.meta['loader']
+        name = loader.get_output_value('name')
+        error_type = "Unknown Error"
+        if failure.check(HttpError):
+            error_type = f"HTTP Error {failure.value.response.status}"
+        elif failure.check(DNSLookupError):
+            error_type = "DNS Lookup Error"
+        elif failure.check(TimeoutError, TCPTimedOutError):
+            error_type = "Timeout Error"
             
-            error_msg = f"Error processing {name} at URL: {url}."
-            
-            if failure.check(HttpError):
-                error_msg += f" HTTP Status: {failure.value.response.status}."
-            elif failure.check(DNSLookupError):
-                error_msg += " DNS Lookup Error."
-            elif failure.check(TimeoutError, TCPTimedOutError):
-                error_msg += " Timeout Error."
-            else:
-                error_msg += f" Unhandled Error: {failure.value}"
-                
-            self.logger.error(error_msg)
-            # Don't lose the data! Yield the item with the info we already scraped.
-            yield loader.load_item()
+        self.logger.error(f"Request to external site failed for '{name}' ({failure.request.url}). Reason: {error_type}. Yielding partial data.")
+        # Best Practice: Don't lose data. Yield the item with the info we have so far.
+        yield loader.load_item()
 
     def handle_about_error(self, failure):
-            """
-            Handles errors when fetching the 'About Us' page. It logs the
-            warning and yields the item without a self-description.
-            """
-            loader = failure.request.meta['loader']
-            name = loader.get_output_value('name')
-            self.logger.warning(f"Request to 'About Us' page failed for {name}. Yielding item without description.")
-            # We still have the tags and other info, so we yield the item.
-            yield loader.load_item()
+        """
+        Handles errors for the 'About Us' page request (Stage 4).
+        This is less critical, so we log a warning and yield the item anyway.
+        """
+        loader = failure.request.meta['loader']
+        name = loader.get_output_value('name')
+        self.logger.warning(f"Request to 'About Us' page failed for '{name}'. Yielding item without self-description.")
+        # We still have valuable info (tags, etc.), so we yield the item.
+        yield loader.load_item()

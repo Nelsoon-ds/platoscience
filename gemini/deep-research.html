@@ -1,259 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive TMS Lead Source Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutrals (Slate, Stone) with a Teal accent -->
-    <!-- Application Structure Plan: A dashboard-style SPA. The core is an interactive, filterable grid of "Source Cards" derived from the report's table. This is more engaging and responsive than a static table. Key interactions include filtering by source category and strategic value, with dynamic charts providing a visual summary and enabling cross-filtering. This structure was chosen to transform the passive report into an active analysis tool, allowing a user to immediately segment and prioritize sources based on their strategic goals (e.g., find all high-quality manufacturer locators). Strategic advice from the report is placed in an accessible accordion at the end to support, but not clutter, the primary data exploration view. -->
-    <!-- Visualization & Content Choices: 
-        1. Report Table -> Goal: Explore/Filter Sources -> Viz: Interactive Card Grid (HTML/JS) -> Interaction: Filter buttons, search -> Justification: Modern, responsive, and allows for progressive disclosure of detailed information.
-        2. Source Categories -> Goal: Compare Source Types -> Viz: Bar Chart (Chart.js) -> Interaction: Click bar to filter grid -> Justification: Standard, clear method for comparing counts. Cross-filtering creates a cohesive experience.
-        3. Strategic Value (Synthesized) -> Goal: Assess Quality vs. Volume -> Viz: Donut Chart (Chart.js) -> Interaction: Hover for details -> Justification: Shows part-to-whole breakdown of source types by their strategic utility (High Quality, High Volume, etc.), providing a quick strategic overview.
-        4. Strategic Recommendations -> Goal: Provide Actionable Guidance -> Viz: Accordion (HTML/JS) -> Interaction: Click to expand -> Justification: Keeps detailed text accessible but secondary to the interactive dashboard.
-    -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* slate-50 */
-        }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 300px;
-            max-height: 350px;
-        }
-        @media (min-width: 768px) {
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Interactive TMS Lead Source Dashboard</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: "Inter", sans-serif;
+                background-color: #f8fafc; /* slate-50 */
+            }
             .chart-container {
-                height: 350px;
-                max-height: 400px;
+                position: relative;
+                width: 100%;
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+                height: 300px;
+                max-height: 350px;
             }
-        }
-        .card-enter {
-            animation: card-enter 0.5s ease-out;
-        }
-        @keyframes card-enter {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
+            @media (min-width: 768px) {
+                .chart-container {
+                    height: 350px;
+                    max-height: 400px;
+                }
             }
-            to {
-                opacity: 1;
-                transform: scale(1);
+            .card-enter {
+                animation: card-enter 0.5s ease-out;
             }
-        }
-        .nav-button.active {
-            background-color: #0d9488; /* teal-600 */
-            color: white;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
-        }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-800">
+            @keyframes card-enter {
+                from {
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            .nav-button.active {
+                background-color: #0d9488; /* teal-600 */
+                color: white;
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+                    0 2px 4px -2px rgb(0 0 0 / 0.1);
+            }
+            .accordion-content {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease-in-out;
+            }
+        </style>
+    </head>
+    <body class="bg-slate-50 text-slate-800">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-teal-700">
+                    TMS Clinic Intelligence Dashboard
+                </h1>
+                <p class="mt-2 text-lg text-slate-600 max-w-3xl mx-auto">
+                    An interactive tool for exploring and analyzing global
+                    sources of Transcranial Magnetic Stimulation (TMS) clinic
+                    data to inform lead generation strategy.
+                </p>
+            </header>
 
-    <div class="container mx-auto p-4 md:p-8">
-        
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-teal-700">TMS Clinic Intelligence Dashboard</h1>
-            <p class="mt-2 text-lg text-slate-600 max-w-3xl mx-auto">An interactive tool for exploring and analyzing global sources of Transcranial Magnetic Stimulation (TMS) clinic data to inform lead generation strategy.</p>
-        </header>
+            <main id="app">
+                <section id="dashboard" class="mb-12">
+                    <div
+                        class="bg-white p-6 rounded-xl shadow-md border border-slate-200"
+                    >
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">
+                            Source Analysis Dashboard
+                        </h2>
+                        <p class="text-slate-600 mb-6">
+                            This dashboard visualizes the directory of digital
+                            sources for identifying TMS clinics. Use the filters
+                            to segment the data by category or strategic value.
+                            The charts provide a high-level overview and can
+                            also be used to filter the source list below. The
+                            goal is to help you quickly identify the most
+                            promising sources for your data acquisition
+                            strategy.
+                        </p>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="w-full">
+                                <h3
+                                    class="text-xl font-semibold text-center mb-2"
+                                >
+                                    Sources by Category
+                                </h3>
+                                <div class="chart-container">
+                                    <canvas id="categoryChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="w-full">
+                                <h3
+                                    class="text-xl font-semibold text-center mb-2"
+                                >
+                                    Sources by Strategic Value
+                                </h3>
+                                <div class="chart-container">
+                                    <canvas id="valueChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-        <main id="app">
-            
-            <section id="dashboard" class="mb-12">
-                <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
-                    <h2 class="text-2xl font-bold text-slate-800 mb-4">Source Analysis Dashboard</h2>
+                <section id="interactive-directory">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">
+                        Interactive Source Directory
+                    </h2>
                     <p class="text-slate-600 mb-6">
-                        This dashboard visualizes the directory of digital sources for identifying TMS clinics. Use the filters to segment the data by category or strategic value. The charts provide a high-level overview and can also be used to filter the source list below. The goal is to help you quickly identify the most promising sources for your data acquisition strategy.
+                        Here is the complete list of identified sources. Use the
+                        buttons to filter the list based on the source category.
+                        The list will dynamically update based on your
+                        selections here or in the charts above.
                     </p>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="w-full">
-                            <h3 class="text-xl font-semibold text-center mb-2">Sources by Category</h3>
-                            <div class="chart-container">
-                                <canvas id="categoryChart"></canvas>
-                            </div>
+
+                    <div
+                        class="bg-white p-6 rounded-xl shadow-md border border-slate-200"
+                    >
+                        <div
+                            class="flex flex-wrap gap-2 mb-6"
+                            id="category-filters"
+                        >
+                            <button
+                                data-filter="All"
+                                class="nav-button active text-sm font-medium px-4 py-2 rounded-full bg-slate-100 text-slate-700 hover:bg-teal-500 hover:text-white transition-colors"
+                            >
+                                All Sources
+                            </button>
                         </div>
-                        <div class="w-full">
-                            <h3 class="text-xl font-semibold text-center mb-2">Sources by Strategic Value</h3>
-                             <div class="chart-container">
-                                <canvas id="valueChart"></canvas>
-                            </div>
-                        </div>
+
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                            id="source-cards"
+                        ></div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section id="interactive-directory">
-                <h2 class="text-2xl font-bold text-slate-800 mb-2">Interactive Source Directory</h2>
-                 <p class="text-slate-600 mb-6">
-                    Here is the complete list of identified sources. Use the buttons to filter the list based on the source category. Click on any card to view detailed rationale and access the direct scraping URL. The list will dynamically update based on your selections here or in the charts above.
-                </p>
+                <section id="recommendations" class="mt-12">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">
+                        Strategic Recommendations
+                    </h2>
+                    <p class="text-slate-600 mb-6">
+                        Based on the analysis of all sources, the following
+                        strategic conclusions and phased data acquisition plan
+                        are recommended. These sections summarize the key
+                        takeaways from the source report, providing a clear path
+                        from data intelligence to actionable lead generation.
+                    </p>
+                    <div id="accordion-container" class="space-y-4"></div>
+                </section>
+            </main>
+        </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
-                    <div class="flex flex-wrap gap-2 mb-6" id="category-filters">
-                        <button data-filter="All" class="nav-button active text-sm font-medium px-4 py-2 rounded-full bg-slate-100 text-slate-700 hover:bg-teal-500 hover:text-white transition-colors">All Sources</button>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="source-cards">
-                    </div>
-                </div>
-            </section>
-            
-            <section id="recommendations" class="mt-12">
-                 <h2 class="text-2xl font-bold text-slate-800 mb-2">Strategic Recommendations</h2>
-                 <p class="text-slate-600 mb-6">
-                    Based on the analysis of all sources, the following strategic conclusions and phased data acquisition plan are recommended. These sections summarize the key takeaways from the source report, providing a clear path from data intelligence to actionable lead generation.
-                </p>
-                <div id="accordion-container" class="space-y-4">
-                </div>
-            </section>
+        <script defer>
+            // --- DATA STORE ---
+            const sourceData = [
+                {
+                    name: "NeuroStar Advanced Therapy",
+                    category: "Manufacturer Locator",
+                    value: "High Quality",
+                    url: "https://neurostar.com/enter-zip-code/",
+                    notes: "Highest Quality - Verified Customers. NeuroStar is a market leader in the US. Locator requires ZIP code submission to display results, so scraping requires programmatic form submission. Their pay-per-use model presents a strategic opportunity to pitch a capital-purchase tDCS device as a cost-saving alternative.",
+                },
+                {
+                    name: "BrainsWay",
+                    category: "Manufacturer Locator",
+                    value: "High Quality",
+                    url: "https://www.brainsway.com/find-a-provider/",
+                    notes: "High Quality - Global Reach & Volume Indicator. Static, crawlable HTML page. Directory features tiered provider badges ('Ultra,' 'Premier,' 'Elite') which are a valuable proxy for clinic size and patient volume, allowing for immediate lead prioritization.",
+                },
+                {
+                    name: "MagVenture",
+                    category: "Manufacturer Locator",
+                    value: "High Quality",
+                    url: "https://magventure.com/us/find-provider/",
+                    notes: "High Quality - Strong European/Local Presence. Based in Denmark. Data is likely loaded via JavaScript, requiring a more advanced scraper. Their customers value efficiency (e.g., Express TMS), so a tDCS pitch should emphasize operational optimization.",
+                },
+                {
+                    name: "Magstim",
+                    category: "Manufacturer Locator",
+                    value: "Strategic",
+                    url: "https://www.magstim.com/provider/",
+                    notes: "High Quality - Pre-qualified Interest in tDCS. Magstim already offers tDCS solutions, making these leads pre-qualified and 'warm' to the concept. The sales conversation can focus directly on competitive advantages versus the incumbent offering.",
+                },
+                {
+                    name: "Nexstim",
+                    category: "Manufacturer Locator",
+                    value: "Strategic",
+                    url: "https://www.nexstim.com/patients/users-and-locations",
+                    notes: "High Quality - Academic & High-Tech Focus. Specializes in navigated TMS (nTMS). List is heavily populated with university hospitals and advanced neuroscience institutes. Prime source for identifying Key Opinion Leaders (KOLs) and early adopters.",
+                },
+                {
+                    name: "Clinical TMS Society (CTMSS)",
+                    category: "Professional Society",
+                    value: "High Quality",
+                    url: "https://clinicaltmssociety.org/find-a-tms-provider/",
+                    notes: "Highest Quality - Vendor-Agnostic Directory. Arguably the most valuable single directory. Membership signals high professional commitment. Due to its data quality and ease of scraping, this should be a top priority.",
+                },
+                {
+                    name: "American Psychiatric Association",
+                    category: "Professional Society",
+                    value: "High Volume",
+                    url: "https://finder.psychiatry.org/s/",
+                    notes: "High Volume - Requires Secondary Filtering. A general directory lacking a specific 'TMS' filter. Requires a two-step process: scrape profiles, then crawl individual sites for keywords. Best for market sizing or data enrichment.",
+                },
+                {
+                    name: "International Neuromodulation Society",
+                    category: "Professional Society",
+                    value: "Strategic",
+                    url: "https://www.neuromodulation.com/become-a-member",
+                    notes: "Strategic - Global KOL Identification. An umbrella organization for all neuromodulation. Scraping requires targeting decentralized chapter websites. Members are highly qualified as potential early adopters and influencers.",
+                },
+                {
+                    name: "Psychology Today",
+                    category: "Health Directory",
+                    value: "High Volume",
+                    url: "https://www.psychologytoday.com/us/therapists/transcranial-magnetic-stimulation-tms",
+                    notes: "Highest Volume - Rich Profile Data. Massive patient-facing directory with direct TMS filtering. Best source for high-volume lead generation. Profiles are data-rich, allowing for deep lead qualification. Requires JS-capable scraper.",
+                },
+                {
+                    name: "ClinicalTrials.gov",
+                    category: "Academic/Research",
+                    value: "Strategic",
+                    url: "https://clinicaltrials.gov/",
+                    notes: "Strategic - Directory of Innovators. Definitive global database of clinical trials. Use the public API. Locations section lists participating institutions, which are ideal targets for research collaborations and identifying key decision-makers.",
+                },
+                {
+                    name: "DGHP (Germany)",
+                    category: "International Directory",
+                    value: "High Quality",
+                    url: "https://dghp-online.de/index.php/kliniken",
+                    notes: "High Quality - Essential for German Market. Provides a direct, public directory of TMS clinics in Germany and Switzerland in a clean HTML table. Critical for penetrating the German market.",
+                },
+                {
+                    name: "Smart TMS (UK)",
+                    category: "International Directory",
+                    value: "Strategic",
+                    url: "https://www.smarttms.co.uk/clinics/",
+                    notes: "High Quality - UK Private Market Leader. Represents a single point of contact for a multi-location private provider. A high-value target for entering the UK private healthcare market.",
+                },
+                {
+                    name: "Monarch Mental Health (Australia)",
+                    category: "International Directory",
+                    value: "Strategic",
+                    url: "https://www.mmhg.com.au/our-locations",
+                    notes: "High Quality - Major Australian Provider Network. A multi-site provider that already uses tDCS, confirming them as a highly qualified lead. Partnership could result in significant market penetration in Australia.",
+                },
+                {
+                    name: "Aushealthpages",
+                    category: "International Directory",
+                    value: "High Volume",
+                    url: "https://aushealthpages.com.au/directory/categories/transcranial-magnetic-stimulation-tms",
+                    notes: "High Volume - Australian Market Aggregator. Excellent source for broad coverage of the Australian market, complementing the more targeted list from major provider networks.",
+                },
+                {
+                    name: "Public Psychiatry, Denmark",
+                    category: "International Directory",
+                    value: "Strategic",
+                    url: "https://www.psykiatrien.rm.dk/",
+                    notes: "Strategic - Danish Public Sector. No single national directory. Requires a bottom-up approach of crawling regional public psychiatry websites (e.g., Region Hovedstaden, Midtjylland, Sjælland) for TMS-related pages.",
+                },
+                {
+                    name: "Nexstim Users (Scandinavia)",
+                    category: "International Directory",
+                    value: "Strategic",
+                    url: "https://www.nexstim.com/patients/users-and-locations",
+                    notes: "High Quality - Scandinavian Academic Centers. The global Nexstim list is valuable for identifying top academic medical centers in the Scandinavian region, which are likely hubs for neuromodulation research.",
+                },
+            ];
 
-        </main>
+            const recommendationData = [
+                {
+                    title: "Core Strategic Conclusion",
+                    content:
+                        "The analysis reveals a clear trade-off between data quality and data volume. For the **highest quality leads**, focus on **Manufacturer Locators** and **Professional Societies**. These sources provide verified, active, and engaged TMS clinics. For the **largest volume of leads** and comprehensive market mapping, the **Large-Scale Health Directories** like Psychology Today are unparalleled, though they may require more sophisticated scraping techniques.",
+                },
+                {
+                    title: "Phase 1: Core Database Construction",
+                    content:
+                        "Begin by scraping the highest-quality, most easily accessible sources. This includes the directories from the **Clinical TMS Society (CTMSS)**, **BrainsWay**, and **Magstim**. This will rapidly generate a core database of several hundred highly qualified, verified leads with minimal technical overhead.",
+                },
+                {
+                    title: "Phase 2: High-Volume Expansion & Enrichment",
+                    content:
+                        "Deploy a more sophisticated, JavaScript-enabled scraping effort on **Psychology Today** to massively expand the database. The rich data from these profiles should be used to enrich the core leads from Phase 1. Concurrently, execute the programmatic, form-submitting scrape of the **NeuroStar** locator to capture their extensive and valuable US network.",
+                },
+                {
+                    title: "Phase 3: Strategic & International Targeting",
+                    content:
+                        "Conduct targeted scraping campaigns on identified international and academic sources. This includes the **DGHP** directory for Germany, **MMHG** and **Aushealthpages** for Australia, and UK targets. Systematically extract location data from the **ClinicalTrials.gov API**. The Scandinavian market will require a manual, 'bottom-up' approach of crawling specific regional health authority websites. This phase is about securing strategic footholds and building relationships with global innovators.",
+                },
+            ];
 
-    </div>
+            // --- STATE & CONFIG ---
+            let categoryChart, valueChart;
+            let currentFilter = "All";
 
-    <script>
-        const sourceData = [
-            { name: "NeuroStar Advanced Therapy", category: "Manufacturer Locator", value: "High Quality", url: "https://neurostar.com/enter-zip-code/", notes: "Highest Quality - Verified Customers. NeuroStar is a market leader in the US. Locator requires ZIP code submission to display results, so scraping requires programmatic form submission. Their pay-per-use model presents a strategic opportunity to pitch a capital-purchase tDCS device as a cost-saving alternative." },
-            { name: "BrainsWay", category: "Manufacturer Locator", value: "High Quality", url: "https://www.brainsway.com/find-a-provider/", notes: "High Quality - Global Reach & Volume Indicator. Static, crawlable HTML page. Directory features tiered provider badges ('Ultra,' 'Premier,' 'Elite') which are a valuable proxy for clinic size and patient volume, allowing for immediate lead prioritization." },
-            { name: "MagVenture", category: "Manufacturer Locator", value: "High Quality", url: "https://magventure.com/us/find-provider/", notes: "High Quality - Strong European/Local Presence. Based in Denmark. Data is likely loaded via JavaScript, requiring a more advanced scraper. Their customers value efficiency (e.g., Express TMS), so a tDCS pitch should emphasize operational optimization." },
-            { name: "Magstim", category: "Manufacturer Locator", value: "Strategic", url: "https://www.magstim.com/provider/", notes: "High Quality - Pre-qualified Interest in tDCS. Magstim already offers tDCS solutions, making these leads pre-qualified and 'warm' to the concept. The sales conversation can focus directly on competitive advantages versus the incumbent offering." },
-            { name: "Nexstim", category: "Manufacturer Locator", value: "Strategic", url: "https://www.nexstim.com/patients/users-and-locations", notes: "High Quality - Academic & High-Tech Focus. Specializes in navigated TMS (nTMS). List is heavily populated with university hospitals and advanced neuroscience institutes. Prime source for identifying Key Opinion Leaders (KOLs) and early adopters." },
-            { name: "Clinical TMS Society (CTMSS)", category: "Professional Society", value: "High Quality", url: "https://clinicaltmssociety.org/find-a-tms-provider/", notes: "Highest Quality - Vendor-Agnostic Directory. Arguably the most valuable single directory. Membership signals high professional commitment. Due to its data quality and ease of scraping, this should be a top priority." },
-            { name: "American Psychiatric Association", category: "Professional Society", value: "High Volume", url: "https://finder.psychiatry.org/s/", notes: "High Volume - Requires Secondary Filtering. A general directory lacking a specific 'TMS' filter. Requires a two-step process: scrape profiles, then crawl individual sites for keywords. Best for market sizing or data enrichment." },
-            { name: "International Neuromodulation Society", category: "Professional Society", value: "Strategic", url: "https://www.neuromodulation.com/become-a-member", notes: "Strategic - Global KOL Identification. An umbrella organization for all neuromodulation. Scraping requires targeting decentralized chapter websites. Members are highly qualified as potential early adopters and influencers." },
-            { name: "Psychology Today", category: "Health Directory", value: "High Volume", url: "https://www.psychologytoday.com/us/therapists/transcranial-magnetic-stimulation-tms", notes: "Highest Volume - Rich Profile Data. Massive patient-facing directory with direct TMS filtering. Best source for high-volume lead generation. Profiles are data-rich, allowing for deep lead qualification. Requires JS-capable scraper." },
-            { name: "ClinicalTrials.gov", category: "Academic/Research", value: "Strategic", url: "https://clinicaltrials.gov/", notes: "Strategic - Directory of Innovators. Definitive global database of clinical trials. Use the public API. Locations section lists participating institutions, which are ideal targets for research collaborations and identifying key decision-makers." },
-            { name: "DGHP (Germany)", category: "International Directory", value: "High Quality", url: "https://dghp-online.de/index.php/kliniken", notes: "High Quality - Essential for German Market. Provides a direct, public directory of TMS clinics in Germany and Switzerland in a clean HTML table. Critical for penetrating the German market." },
-            { name: "Smart TMS (UK)", category: "International Directory", value: "Strategic", url: "https://www.smarttms.co.uk/clinics/", notes: "High Quality - UK Private Market Leader. Represents a single point of contact for a multi-location private provider. A high-value target for entering the UK private healthcare market." },
-            { name: "Monarch Mental Health (Australia)", category: "International Directory", value: "Strategic", url: "https://www.mmhg.com.au/our-locations", notes: "High Quality - Major Australian Provider Network. A multi-site provider that already uses tDCS, confirming them as a highly qualified lead. Partnership could result in significant market penetration in Australia." },
-            { name: "Aushealthpages", category: "International Directory", value: "High Volume", url: "https://aushealthpages.com.au/directory/categories/transcranial-magnetic-stimulation-tms", notes: "High Volume - Australian Market Aggregator. Excellent source for broad coverage of the Australian market, complementing the more targeted list from major provider networks." },
-            { name: "Public Psychiatry, Denmark", category: "International Directory", value: "Strategic", url: "https://www.psykiatrien.rm.dk/", notes: "Strategic - Danish Public Sector. No single national directory. Requires a bottom-up approach of crawling regional public psychiatry websites (e.g., Region Hovedstaden, Midtjylland, Sjælland) for TMS-related pages." },
-            { name: "Nexstim Users (Scandinavia)", category: "International Directory", value: "Strategic", url: "https://www.nexstim.com/patients/users-and-locations", notes: "High Quality - Scandinavian Academic Centers. The global Nexstim list is valuable for identifying top academic medical centers in the Scandinavian region, which are likely hubs for neuromodulation research." }
-        ];
+            /**
+             * Best Practice: Centralize color and style mappings.
+             * This makes the code robust. If a new 'value' is added to the data,
+             * it will gracefully fall back to the 'default' style instead of breaking.
+             * It also makes it easy to change colors for the entire app in one place.
+             */
+            const valueStyles = {
+                "High Quality": {
+                    classes: "bg-green-100 text-green-800",
+                    chartBg: "rgba(16, 185, 129, 0.6)",
+                    chartBorder: "rgba(16, 185, 129, 1)",
+                },
+                "High Volume": {
+                    classes: "bg-blue-100 text-blue-800",
+                    chartBg: "rgba(59, 130, 246, 0.6)",
+                    chartBorder: "rgba(59, 130, 246, 1)",
+                },
+                Strategic: {
+                    classes: "bg-purple-100 text-purple-800",
+                    chartBg: "rgba(147, 51, 234, 0.6)",
+                    chartBorder: "rgba(147, 51, 234, 1)",
+                },
+                default: {
+                    classes: "bg-slate-100 text-slate-800",
+                    chartBg: "rgba(100, 116, 139, 0.6)",
+                    chartBorder: "rgba(100, 116, 139, 1)",
+                },
+            };
 
-        const recommendationData = [
-            {
-                title: "Core Strategic Conclusion",
-                content: "The analysis reveals a clear trade-off between data quality and data volume. For the **highest quality leads**, focus on **Manufacturer Locators** and **Professional Societies**. These sources provide verified, active, and engaged TMS clinics. For the **largest volume of leads** and comprehensive market mapping, the **Large-Scale Health Directories** like Psychology Today are unparalleled, though they may require more sophisticated scraping techniques."
-            },
-            {
-                title: "Phase 1: Core Database Construction",
-                content: "Begin by scraping the highest-quality, most easily accessible sources. This includes the directories from the **Clinical TMS Society (CTMSS)**, **BrainsWay**, and **Magstim**. This will rapidly generate a core database of several hundred highly qualified, verified leads with minimal technical overhead."
-            },
-            {
-                title: "Phase 2: High-Volume Expansion & Enrichment",
-                content: "Deploy a more sophisticated, JavaScript-enabled scraping effort on **Psychology Today** to massively expand the database. The rich data from these profiles should be used to enrich the core leads from Phase 1. Concurrently, execute the programmatic, form-submitting scrape of the **NeuroStar** locator to capture their extensive and valuable US network."
-            },
-            {
-                title: "Phase 3: Strategic & International Targeting",
-                content: "Conduct targeted scraping campaigns on identified international and academic sources. This includes the **DGHP** directory for Germany, **MMHG** and **Aushealthpages** for Australia, and UK targets. Systematically extract location data from the **ClinicalTrials.gov API**. The Scandinavian market will require a manual, 'bottom-up' approach of crawling specific regional health authority websites. This phase is about securing strategic footholds and building relationships with global innovators."
-            }
-        ];
+            const chartColors = {
+                teal: "rgba(13, 148, 136, 0.6)",
+                teal_border: "rgba(13, 148, 136, 1)",
+                slate: "rgba(100, 116, 139, 0.6)",
+                slate_border: "rgba(100, 116, 139, 1)",
+            };
 
-        let categoryChart, valueChart;
-        let currentFilter = 'All';
+            // --- DOM RENDERERS ---
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const categoryFiltersContainer = document.getElementById('category-filters');
-            const sourceCardsContainer = document.getElementById('source-cards');
-            const accordionContainer = document.getElementById('accordion-container');
-            
-            const categories = [...new Set(sourceData.map(d => d.category))];
-            
-            categories.forEach(category => {
-                const button = document.createElement('button');
-                button.dataset.filter = category;
-                button.className = 'nav-button text-sm font-medium px-4 py-2 rounded-full bg-slate-100 text-slate-700 hover:bg-teal-500 hover:text-white transition-colors';
-                button.textContent = category;
-                categoryFiltersContainer.appendChild(button);
-            });
+            /**
+             * Performance: Renders source cards by building a single HTML string
+             * and updating the DOM once, which is much faster than appending
+             * elements in a loop.
+             */
+            function renderSourceCards() {
+                const container = document.getElementById("source-cards");
+                if (!container) return; // Robustness check
 
-            categoryFiltersContainer.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    currentFilter = e.target.dataset.filter;
-                    updateActiveButton(e.target);
-                    renderSourceCards();
-                    highlightChartSelection(categoryChart, currentFilter);
+                const filteredData = sourceData.filter(
+                    (d) =>
+                        currentFilter === "All" || d.category === currentFilter
+                );
+
+                if (filteredData.length === 0) {
+                    container.innerHTML = `<p class="text-slate-500 col-span-full text-center">No sources found for this category.</p>`;
+                    return;
                 }
-            });
 
-            recommendationData.forEach((item, index) => {
-                const accItem = document.createElement('div');
-                accItem.className = 'bg-white border border-slate-200 rounded-lg shadow-sm';
-                accItem.innerHTML = `
-                    <button class="accordion-toggle w-full flex justify-between items-center text-left p-4 font-semibold text-slate-700 hover:bg-slate-50">
-                        <span>${item.title}</span>
-                        <span class="transform transition-transform duration-300">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </span>
-                    </button>
-                    <div class="accordion-content">
-                        <p class="p-4 pt-0 text-slate-600">${item.content}</p>
-                    </div>
-                `;
-                accordionContainer.appendChild(accItem);
-            });
-
-            accordionContainer.addEventListener('click', (e) => {
-                const toggle = e.target.closest('.accordion-toggle');
-                if (toggle) {
-                    const content = toggle.nextElementSibling;
-                    const icon = toggle.querySelector('span:last-child');
-                    
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                        icon.classList.remove('rotate-180');
-                    } else {
-                        document.querySelectorAll('.accordion-content').forEach(el => el.style.maxHeight = null);
-                        document.querySelectorAll('.accordion-toggle span:last-child').forEach(el => el.classList.remove('rotate-180'));
-                        content.style.maxHeight = content.scrollHeight + "px";
-                        icon.classList.add('rotate-180');
-                    }
-                }
-            });
-
-            renderCharts();
-            renderSourceCards();
-        });
-
-        function updateActiveButton(activeButton) {
-            document.querySelectorAll('#category-filters .nav-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            activeButton.classList.add('active');
-        }
-
-        function renderSourceCards() {
-            const container = document.getElementById('source-cards');
-            container.innerHTML = '';
-            const filteredData = sourceData.filter(d => currentFilter === 'All' || d.category === currentFilter);
-            
-            if (filteredData.length === 0) {
-                container.innerHTML = `<p class="text-slate-500 col-span-full text-center">No sources found for this category.</p>`;
-                return;
-            }
-
-            filteredData.forEach(d => {
-                const card = document.createElement('div');
-                card.className = 'card-enter bg-slate-50/50 border border-slate-200 rounded-lg p-5 flex flex-col justify-between hover:shadow-lg hover:border-teal-300 transition-all duration-300';
-                card.innerHTML = `
+                const cardsHTML = filteredData
+                    .map((d) => {
+                        // Robustness: Use the style map to get classes, with a fallback.
+                        const style =
+                            valueStyles[d.value] || valueStyles.default;
+                        return `
+                <div class="card-enter bg-slate-50/50 border border-slate-200 rounded-lg p-5 flex flex-col justify-between hover:shadow-lg hover:border-teal-300 transition-all duration-300">
                     <div>
-                        <span class="inline-block bg-${d.value === 'High Quality' ? 'green' : d.value === 'High Volume' ? 'blue' : 'purple'}-100 text-${d.value === 'High Quality' ? 'green' : d.value === 'High Volume' ? 'blue' : 'purple'}-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">${d.value}</span>
+                        <span class="inline-block text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full ${style.classes}">${d.value}</span>
                         <h3 class="font-bold text-lg mt-2 text-slate-800">${d.name}</h3>
                         <p class="text-sm text-slate-500 mb-3">${d.category}</p>
                         <p class="text-slate-600 text-sm">${d.notes}</p>
@@ -262,126 +381,223 @@
                         Go to Source 
                         <span class="ml-1">&#8599;</span>
                     </a>
+                </div>
                 `;
-                container.appendChild(card);
-            });
-        }
+                    })
+                    .join("");
 
-        function renderCharts() {
-            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-            const valueCtx = document.getElementById('valueChart').getContext('2d');
+                container.innerHTML = cardsHTML;
+            }
 
-            const categoryCounts = sourceData.reduce((acc, d) => {
-                acc[d.category] = (acc[d.category] || 0) + 1;
-                return acc;
-            }, {});
+            function renderCharts() {
+                const categoryCtx = document
+                    .getElementById("categoryChart")
+                    ?.getContext("2d");
+                const valueCtx = document
+                    .getElementById("valueChart")
+                    ?.getContext("2d");
+                if (!categoryCtx || !valueCtx) return;
 
-            const valueCounts = sourceData.reduce((acc, d) => {
-                acc[d.value] = (acc[d.value] || 0) + 1;
-                return acc;
-            }, {});
-            
-            const chartColors = {
-                teal: 'rgba(13, 148, 136, 0.6)',
-                teal_border: 'rgba(13, 148, 136, 1)',
-                purple: 'rgba(147, 112, 219, 0.6)',
-                purple_border: 'rgba(147, 112, 219, 1)',
-                green: 'rgba(16, 185, 129, 0.6)',
-                green_border: 'rgba(16, 185, 129, 1)',
-                blue: 'rgba(59, 130, 246, 0.6)',
-                blue_border: 'rgba(59, 130, 246, 1)',
-                slate: 'rgba(100, 116, 139, 0.6)',
-                slate_border: 'rgba(100, 116, 139, 1)'
-            };
-            
-            const valueColorMap = {
-                'High Quality': { bg: chartColors.green, border: chartColors.green_border },
-                'High Volume': { bg: chartColors.blue, border: chartColors.blue_border },
-                'Strategic': { bg: chartColors.purple, border: chartColors.purple_border },
-            };
+                const categoryCounts = sourceData.reduce((acc, d) => {
+                    acc[d.category] = (acc[d.category] || 0) + 1;
+                    return acc;
+                }, {});
 
-            categoryChart = new Chart(categoryCtx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(categoryCounts),
-                    datasets: [{
-                        label: '# of Sources',
-                        data: Object.values(categoryCounts),
-                        backgroundColor: chartColors.teal,
-                        borderColor: chartColors.teal_border,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    scales: {
-                        x: { beginAtZero: true, grid: { display: false } },
-                        y: { grid: { display: true, color: '#e2e8f0' } }
+                const valueCounts = sourceData.reduce((acc, d) => {
+                    acc[d.value] = (acc[d.value] || 0) + 1;
+                    return acc;
+                }, {});
+
+                categoryChart = new Chart(categoryCtx, {
+                    type: "bar",
+                    data: {
+                        labels: Object.keys(categoryCounts),
+                        datasets: [
+                            {
+                                label: "# of Sources",
+                                data: Object.values(categoryCounts),
+                                backgroundColor: chartColors.teal,
+                                borderColor: chartColors.teal_border,
+                                borderWidth: 1,
+                            },
+                        ],
                     },
-                    plugins: { legend: { display: false } },
-                    onClick: (e) => {
-                        const activePoints = categoryChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
-                        if (activePoints.length) {
-                            const firstPoint = activePoints[0];
-                            const label = categoryChart.data.labels[firstPoint.index];
-                            currentFilter = label;
-                            const activeButton = document.querySelector(`#category-filters button[data-filter="${label}"]`);
-                            updateActiveButton(activeButton);
-                            renderSourceCards();
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: "y",
+                        scales: {
+                            x: { beginAtZero: true, grid: { display: false } },
+                            y: { grid: { display: true, color: "#e2e8f0" } },
+                        },
+                        plugins: { legend: { display: false } },
+                        onClick: (e) => {
+                            const activePoints =
+                                categoryChart.getElementsAtEventForMode(
+                                    e,
+                                    "nearest",
+                                    { intersect: true },
+                                    true
+                                );
+                            if (activePoints.length) {
+                                const label =
+                                    categoryChart.data.labels[
+                                        activePoints[0].index
+                                    ];
+                                currentFilter = label;
+                                const activeButton = document.querySelector(
+                                    `#category-filters button[data-filter="${label}"]`
+                                );
+                                if (activeButton)
+                                    updateActiveButton(activeButton);
+                                renderSourceCards();
+                            }
+                        },
+                    },
+                });
+
+                valueChart = new Chart(valueCtx, {
+                    type: "doughnut",
+                    data: {
+                        labels: Object.keys(valueCounts),
+                        datasets: [
+                            {
+                                label: "Strategic Value",
+                                data: Object.values(valueCounts),
+                                backgroundColor: Object.keys(valueCounts).map(
+                                    (v) =>
+                                        (valueStyles[v] || valueStyles.default)
+                                            .chartBg
+                                ),
+                                borderColor: Object.keys(valueCounts).map(
+                                    (v) =>
+                                        (valueStyles[v] || valueStyles.default)
+                                            .chartBorder
+                                ),
+                                borderWidth: 1,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: "bottom" },
+                        },
+                    },
+                });
+            }
+
+            function highlightChartSelection(chart, label) {
+                if (!chart) return;
+                chart.data.labels.forEach((l, i) => {
+                    const isSelected = label === "All" || l === label;
+                    chart.data.datasets[0].backgroundColor[i] = isSelected
+                        ? chartColors.teal
+                        : chartColors.slate;
+                    chart.data.datasets[0].borderColor[i] = isSelected
+                        ? chartColors.teal_border
+                        : chartColors.slate_border;
+                });
+                chart.update();
+            }
+
+            function updateActiveButton(activeButton) {
+                document
+                    .querySelectorAll("#category-filters .nav-button")
+                    .forEach((btn) => btn.classList.remove("active"));
+                if (activeButton) activeButton.classList.add("active");
+            }
+
+            // --- INITIALIZATION & EVENT LISTENERS ---
+            document.addEventListener("DOMContentLoaded", () => {
+                const categoryFiltersContainer =
+                    document.getElementById("category-filters");
+                const accordionContainer = document.getElementById(
+                    "accordion-container"
+                );
+                if (!categoryFiltersContainer || !accordionContainer) {
+                    console.error(
+                        "Initialization failed: A required container element is missing."
+                    );
+                    return;
+                }
+
+                const categories = [
+                    ...new Set(sourceData.map((d) => d.category)),
+                ];
+
+                // Build filter buttons
+                categories.forEach((category) => {
+                    const button = document.createElement("button");
+                    button.dataset.filter = category;
+                    button.className =
+                        "nav-button text-sm font-medium px-4 py-2 rounded-full bg-slate-100 text-slate-700 hover:bg-teal-500 hover:text-white transition-colors";
+                    button.textContent = category;
+                    categoryFiltersContainer.appendChild(button);
+                });
+
+                // Build accordion
+                const accordionHTML = recommendationData
+                    .map(
+                        (item) => `
+                <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <button class="accordion-toggle w-full flex justify-between items-center text-left p-4 font-semibold text-slate-700 hover:bg-slate-50">
+                        <span>${item.title}</span>
+                        <span class="transform transition-transform duration-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </span>
+                    </button>
+                    <div class="accordion-content">
+                        <p class="p-4 pt-0 text-slate-600">${item.content}</p>
+                    </div>
+                </div>
+            `
+                    )
+                    .join("");
+                accordionContainer.innerHTML = accordionHTML;
+
+                // Event Listeners (using delegation)
+                categoryFiltersContainer.addEventListener("click", (e) => {
+                    if (e.target.tagName === "BUTTON") {
+                        currentFilter = e.target.dataset.filter;
+                        updateActiveButton(e.target);
+                        renderSourceCards();
+                        highlightChartSelection(categoryChart, currentFilter);
+                    }
+                });
+
+                accordionContainer.addEventListener("click", (e) => {
+                    const toggle = e.target.closest(".accordion-toggle");
+                    if (toggle) {
+                        const content = toggle.nextElementSibling;
+                        const icon = toggle.querySelector("span:last-child");
+                        const isOpen =
+                            content.style.maxHeight &&
+                            content.style.maxHeight !== "0px";
+
+                        // Optional: Close all others first
+                        document
+                            .querySelectorAll(".accordion-content")
+                            .forEach((el) => (el.style.maxHeight = null));
+                        document
+                            .querySelectorAll(
+                                ".accordion-toggle span:last-child"
+                            )
+                            .forEach((el) => el.classList.remove("rotate-180"));
+
+                        if (!isOpen) {
+                            content.style.maxHeight =
+                                content.scrollHeight + "px";
+                            icon.classList.add("rotate-180");
                         }
                     }
-                }
+                });
+
+                // Initial Render
+                renderCharts();
+                renderSourceCards();
             });
-
-            valueChart = new Chart(valueCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(valueCounts),
-                    datasets: [{
-                        label: 'Strategic Value',
-                        data: Object.values(valueCounts),
-                        backgroundColor: Object.keys(valueCounts).map(v => valueColorMap[v].bg),
-                        borderColor: Object.keys(valueCounts).map(v => valueColorMap[v].border),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        }
-                    }
-                }
-            });
-        }
-        
-        function highlightChartSelection(chart, label) {
-            const backgroundColors = chart.data.datasets[0].backgroundColor;
-            const borderColors = chart.data.datasets[0].borderColor;
-
-            const newBgs = [];
-            const newBorders = [];
-
-            chart.data.labels.forEach((l, i) => {
-                if (label === 'All' || l === label) {
-                    newBgs[i] = chartColors.teal;
-                    newBorders[i] = chartColors.teal_border;
-                } else {
-                    newBgs[i] = chartColors.slate;
-                    newBorders[i] = chartColors.slate_border;
-                }
-            });
-
-            chart.data.datasets[0].backgroundColor = newBgs;
-            chart.data.datasets[0].borderColor = newBorders;
-            chart.update();
-        }
-
-    </script>
-
-</body>
+        </script>
+    </body>
 </html>

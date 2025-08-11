@@ -1,48 +1,94 @@
 import scrapy
 from itemloaders.processors import MapCompose, TakeFirst, Join
 
+# --- Custom Processors ---
+# Best Practice: Define custom processors to handle data cleaning tasks
+# that are specific to your project.
 
-def strip_whitespace(value):
-    """Custom processor to strip leading/trailing whitespace."""
-    return value.strip()
+
+def clean_text(value):
+    """
+    A robust custom processor to strip leading/trailing whitespace.
+    It safely handles non-string and None values.
+    """
+    # Robustness: Check if the value is a string before trying to strip it.
+    if isinstance(value, str):
+        return value.strip()
+    # Return the value as-is if it's not a string (e.g., None, int).
+    return value
+
+# --- Item Definitions ---
+
 
 class ProviderItem(scrapy.Item):
     """
-    Defines the data structure for a scraped provider.
-    Processors are used to clean and format the data automatically
-    before it gets saved.
+    Defines the data structure for a provider scraped from a source that requires
+    a multi-stage crawl (e.g., crawling an external website).
+
+    Processors automatically clean and format the data as it's added by the ItemLoader.
+    - input_processor: Runs on each piece of data as it's added to a field.
+    - output_processor: Runs on the entire list of data for a field just before the item is yielded.
     """
-    # --- Input Processors (run on data as it's added) ---
-    # MapCompose applies a series of functions to each value.
-    # Here, we're just stripping whitespace from every text field.
+
+    # --- Data Fields ---
+
+    # TakeFirst() is the most common output processor. Scrapy selectors always
+    # return a list, but for fields like 'name', we only want the first result.
+    # e.g., loader.add_css('name', 'h1::text') -> ['My Clinic'] -> 'My Clinic'
     name = scrapy.Field(
-        input_processor=MapCompose(strip_whitespace),
-        output_processor=TakeFirst() # Takes the first non-null value
+        input_processor=MapCompose(clean_text),
+        output_processor=TakeFirst()
     )
     source_url = scrapy.Field(
         output_processor=TakeFirst()
     )
     phone = scrapy.Field(
-        input_processor=MapCompose(strip_whitespace),
+        input_processor=MapCompose(clean_text),
         output_processor=TakeFirst()
     )
     email = scrapy.Field(
-        input_processor=MapCompose(strip_whitespace),
+        input_processor=MapCompose(clean_text),
         output_processor=TakeFirst()
     )
     website_link = scrapy.Field(
         output_processor=TakeFirst()
     )
-    # Join() will join all the collected text with a space.
+    specialties = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=Join(', ')
+    )
+    therapy_types = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=Join(', ')
+    )
+    conditions = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=Join(', ')
+    )
+    address = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=Join(', ')
+    )
+    social_links = scrapy.Field(
+        output_processor=Join(', ')
+    )
+    city = scrapy.Field()
+    state = scrapy.Field()
+    zipcode = scrapy.Field()
     self_description = scrapy.Field(
-        input_processor=MapCompose(strip_whitespace),
+        input_processor=MapCompose(clean_text),
         output_processor=Join(' ')
     )
-    # For tags, we don't use TakeFirst() because we want the whole list.
+
     tags = scrapy.Field()
-    
+
 
 class ClinicItem(scrapy.Item):
+    """
+    Defines the final, standardized data structure for a clinic after
+    all scraping and data processing is complete. This serves as the
+    target schema for the master data file.
+    """
     # Core Identity Fields
     clinic_name = scrapy.Field()
     full_address = scrapy.Field()
@@ -53,11 +99,10 @@ class ClinicItem(scrapy.Item):
     source_name = scrapy.Field()
     source_url = scrapy.Field()
     source_category = scrapy.Field()
-    
+
     # Enriched Strategic Data
     tms_equipment_brand = scrapy.Field()
     provider_tier = scrapy.Field()
-    
+
     # Technical Metadata
     scrape_timestamp = scrapy.Field()
-
