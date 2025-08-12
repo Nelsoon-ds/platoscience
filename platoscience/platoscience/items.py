@@ -31,10 +31,6 @@ class ProviderItem(scrapy.Item):
     """
 
     # --- Data Fields ---
-
-    # TakeFirst() is the most common output processor. Scrapy selectors always
-    # return a list, but for fields like 'name', we only want the first result.
-    # e.g., loader.add_css('name', 'h1::text') -> ['My Clinic'] -> 'My Clinic'
     name = scrapy.Field(
         input_processor=MapCompose(clean_text),
         output_processor=TakeFirst()
@@ -61,10 +57,6 @@ class ProviderItem(scrapy.Item):
         input_processor=MapCompose(clean_text),
         output_processor=Join(', ')
     )
-    conditions = scrapy.Field(
-        input_processor=MapCompose(clean_text),
-        output_processor=Join(', ')
-    )
     address = scrapy.Field(
         input_processor=MapCompose(clean_text),
         output_processor=Join(', ')
@@ -72,14 +64,18 @@ class ProviderItem(scrapy.Item):
     social_links = scrapy.Field(
         output_processor=Join(', ')
     )
-    city = scrapy.Field()
-    state = scrapy.Field()
-    zipcode = scrapy.Field()
+    state = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=TakeFirst()
+    )
+    zipcode = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=TakeFirst()
+    )
     self_description = scrapy.Field(
         input_processor=MapCompose(clean_text),
         output_processor=Join(' ')
     )
-
     tags = scrapy.Field()
 
 

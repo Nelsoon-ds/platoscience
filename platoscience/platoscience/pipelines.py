@@ -128,20 +128,6 @@ class DataCleaningPipeline:
             else:
                 adapter['email'] = None  # Invalid email
 
-        # --- Task 4: Clean Text Fields ---
-        text_fields = ['name', 'self_description',
-                       'specialties', 'therapy_types', 'conditions']
-        for field in text_fields:
-            value = adapter.get(field)
-            if value:
-                # Clean extra whitespace and formatting
-                cleaned_value = re.sub(r'\s+', ' ', str(value)).strip()
-                # Remove excessive commas
-                cleaned_value = re.sub(r',\s*,+', ',', cleaned_value)
-                # Remove leading/trailing commas
-                cleaned_value = cleaned_value.strip(', ')
-                adapter[field] = cleaned_value
-
         # --- Task 5: Clean Tags Field ---
         tags = adapter.get('tags')
         if tags:
