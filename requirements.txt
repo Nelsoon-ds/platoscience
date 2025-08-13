@@ -1,0 +1,3 @@
+# requirements.txt
+scrapy
+scrapy-google-sheets-exporter
