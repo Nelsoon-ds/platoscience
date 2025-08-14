@@ -1,2 +1,0 @@
-Contact Score = E-mail + Phone + Adress?
-Lead Score = Tags [List of Keywords] + IF Statement checking names of clinics (clinic, MD, etc)
