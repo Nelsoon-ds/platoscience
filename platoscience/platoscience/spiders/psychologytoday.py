@@ -9,20 +9,22 @@ import json
 
 class PsychologyTodaySpider(scrapy.Spider):
     name = 'psychology'
-
+    # Custom settings for this spider, specifically for the Google Sheets feed exporter.
+    # These settings override the global settings in settings.py.
     custom_settings = {
         "FEEDS": {
+            # The key is the Google Sheets URL.
             "gsheets://docs.google.com/spreadsheets/d/1avyAe8ORhqR1i6eyAIPH8ifeOEoWrgDMdPv6FnA_yvc/edit#gid=0": {
                 "format": "csv",
                 "encoding": "utf-8",
                 "gsheets_sheet_name": "Scrape",
-                "include_headers_line": False,
+                "include_headers_line": False,  # Set to True if the sheet is empty
                 "fields": [
                     "name", "phone", "email", "website_link", "address",
                     "state", "zipcode", "specialties", "therapy_types",
                     "self_description", "tags", "social_links", "source_url"
                 ],
-                "overwrite": False
+                "overwrite": False  # Appends new data instead of clearing the sheet
             }
         }
     }
@@ -34,6 +36,7 @@ class PsychologyTodaySpider(scrapy.Spider):
             self.logger.error(
                 "No states found in STATES_TO_CRAWL setting.")
             return
+
         for state in states:
             formatted_state = state.lower().replace(' ', '-')
             url = f"{base_url}{formatted_state}"
