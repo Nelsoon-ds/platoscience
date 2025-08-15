@@ -22,9 +22,7 @@ def clean_text(value):
 
 class ProviderItem(scrapy.Item):
     """
-    Defines the data structure for a provider scraped from a source that requires
-    a multi-stage crawl (e.g., crawling an external website).
-
+    Defines the data structure for a provider.
     Processors automatically clean and format the data as it's added by the ItemLoader.
     - input_processor: Runs on each piece of data as it's added to a field.
     - output_processor: Runs on the entire list of data for a field just before the item is yielded.
@@ -57,12 +55,15 @@ class ProviderItem(scrapy.Item):
         input_processor=MapCompose(clean_text),
         output_processor=Join(', ')
     )
+    # The full address string extracted by the spider.
     address = scrapy.Field(
         input_processor=MapCompose(clean_text),
         output_processor=Join(', ')
     )
-    social_links = scrapy.Field(
-        output_processor=Join(', ')
+    # The following address components will be populated by the DataCleaningPipeline.
+    city = scrapy.Field(
+        input_processor=MapCompose(clean_text),
+        output_processor=TakeFirst()
     )
     state = scrapy.Field(
         input_processor=MapCompose(clean_text),
@@ -72,33 +73,14 @@ class ProviderItem(scrapy.Item):
         input_processor=MapCompose(clean_text),
         output_processor=TakeFirst()
     )
+    social_links = scrapy.Field(
+        # Social links can be a list, so we join them into a single string.
+        output_processor=Join(', ')
+    )
     self_description = scrapy.Field(
         input_processor=MapCompose(clean_text),
+        # Join paragraphs of text with a space.
         output_processor=Join(' ')
     )
+    # Tags are collected as a list and will be processed by the pipeline.
     tags = scrapy.Field()
-
-
-class ClinicItem(scrapy.Item):
-    """
-    Defines the final, standardized data structure for a clinic after
-    all scraping and data processing is complete. This serves as the
-    target schema for the master data file.
-    """
-    # Core Identity Fields
-    clinic_name = scrapy.Field()
-    full_address = scrapy.Field()
-    phone_number = scrapy.Field()
-    clinic_website = scrapy.Field()
-
-    # Provenance & Source Intelligence
-    source_name = scrapy.Field()
-    source_url = scrapy.Field()
-    source_category = scrapy.Field()
-
-    # Enriched Strategic Data
-    tms_equipment_brand = scrapy.Field()
-    provider_tier = scrapy.Field()
-
-    # Technical Metadata
-    scrape_timestamp = scrapy.Field()
