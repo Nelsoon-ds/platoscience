@@ -20,7 +20,7 @@ This Scrapy project is designed to crawl the Psychology Today website to gather 
 platoscience/
 ├── platoscience/
 │ ├── spiders/
-│ │ ├── psychologytoday.py # The main spider logic
+│ │ └── psychologytoday.py # The main spider logic
 │ ├── items.py # Defines the data structure (schema)
 │ ├── middlewares.py # Custom middleware (currently boilerplate)
 │ ├── pipelines.py # Data cleaning and processing pipeline
@@ -28,6 +28,26 @@ platoscience/
 ├── scrapy.cfg # Scrapy project configuration file
 └── requirements.txt # Python dependencies
 
+## Data Fields
+
+The spider exports the following fields to CSV and Google Sheets:
+
+| Column Name        | Description |
+|--------------------|-------------|
+| **name**           | Name of the provider or treatment center |
+| **phone**          | Contact phone number (cleaned and standardized) |
+| **email**          | Contact email address |
+| **website_link**   | Link to the provider's official website |
+| **address**        | Full street address |
+| **city**           | City where the provider is located |
+| **state**          | U.S. state abbreviation |
+| **zipcode**        | Zip/postal code |
+| **specialties**    | Specialties listed on Psychology Today |
+| **therapy_types**  | Types of therapy or treatment approaches used |
+| **self_description** | Long-form description, including scraped “About Us” content |
+| **tags**           | Keywords found during scraping (including external site data) |
+| **social_links**   | Links to provider’s social media profiles |
+| **source_url**     | Direct link to the provider’s Psychology Today profile |
 
 
 ## Setup and Installation
